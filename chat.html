@@ -1,189 +1,74 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Static Chat</title>
-    <style>
-        body {
-            font-family: sans-serif;
-            margin: 20px;
-            background-color: #f4f4f4;
-        }
-
-        #username-prompt {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-        }
-
-        #username-prompt label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-        }
-
-        #username-prompt input[type="text"] {
-            width: calc(100% - 22px);
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-
-        #username-prompt button {
-            background-color: #007bff;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1em;
-        }
-
-        #username-prompt button:hover {
-            background-color: #0056b3;
-        }
-
-        #chat-area {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            display: none;
-        }
-
-        #chat-display {
-            border: 1px solid #ddd;
-            background-color: #f9f9f9;
-            height: 300px;
-            overflow-y: auto;
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 4px;
-        }
-
-        #chat-display p {
-            margin: 5px 0;
-            padding: 8px;
-            border-bottom: 1px solid #eee;
-            word-break: break-word;
-        }
-
-        #chat-display p:last-child {
-            border-bottom: none;
-        }
-
-        #chat-display p strong {
-            font-weight: bold;
-            color: #333;
-            margin-right: 5px;
-        }
-
-        #chat-input-area {
-            display: flex;
-        }
-
-        #message-input {
-            flex-grow: 1;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px 0 0 4px;
-            box-sizing: border-box;
-            font-size: 1em;
-        }
-
-        #send-button {
-            background-color: #28a745;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 0 4px 4px 0;
-            cursor: pointer;
-            font-size: 1em;
-        }
-
-        #send-button:hover {
-            background-color: #1e7e34;
-        }
-    </style>
+  <title>Static P2P Chat</title>
+  <style>
+    body { font-family: Arial; background: #f7f7f7; padding: 20px; }
+    #chat { max-width: 600px; margin: auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    #messages { height: 300px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; background: #f9f9f9; }
+    .msg { margin: 5px 0; padding: 5px 10px; background: #e0e0e0; border-radius: 5px; }
+    .me { background: #d1e7dd; }
+    input, button { padding: 8px; font-size: 14px; }
+    #conn { margin-bottom: 15px; }
+  </style>
 </head>
 <body>
-    <div id="username-prompt">
-        <label for="username">Choose a Username:</label>
-        <input type="text" id="username">
-        <button id="set-username">Join Chat</button>
+  <div id="chat">
+    <h2>🗨️ P2P Static Chat</h2>
+    <div><strong>Your ID:</strong> <span id="my-id"></span></div>
+    <div id="conn">
+      <input id="peer-id" placeholder="Enter friend's ID" />
+      <button onclick="connectToPeer()">Connect</button>
     </div>
+    <div id="messages"></div>
+    <input id="msg" placeholder="Type a message..." />
+    <button onclick="sendMessage()">Send</button>
+  </div>
 
-    <div id="chat-area">
-        <div id="chat-display">
-        </div>
-        <div id="chat-input-area">
-            <input type="text" id="message-input" placeholder="Type your message...">
-            <button id="send-button">Send</button>
-        </div>
-    </div>
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <script>
+    const messages = document.getElementById('messages');
+    const myIdSpan = document.getElementById('my-id');
+    const msgInput = document.getElementById('msg');
+    const peerIdInput = document.getElementById('peer-id');
 
-    <script>
-        const usernamePrompt = document.getElementById('username-prompt');
-        const chatArea = document.getElementById('chat-area');
-        const usernameInput = document.getElementById('username');
-        const setUsernameButton = document.getElementById('set-username');
-        const chatDisplay = document.getElementById('chat-display');
-        const messageInput = document.getElementById('message-input');
-        const sendButton = document.getElementById('send-button');
-        let currentUsername = localStorage.getItem('chatUsername');
+    const peer = new Peer(); // Creates a new peer with random ID
 
-        if (currentUsername) {
-            usernamePrompt.style.display = 'none';
-            chatArea.style.display = 'block';
-            displayWelcomeMessage(currentUsername);
-        } else {
-            usernamePrompt.style.display = 'block';
-            chatArea.style.display = 'none';
-        }
+    let conn = null;
 
-        setUsernameButton.addEventListener('click', () => {
-            const username = usernameInput.value.trim();
-            if (username) {
-                localStorage.setItem('chatUsername', username);
-                currentUsername = username;
-                usernamePrompt.style.display = 'none';
-                chatArea.style.display = 'block';
-                displayWelcomeMessage(currentUsername);
-            } else {
-                alert('Please enter a username.');
-            }
-        });
+    peer.on('open', id => {
+      myIdSpan.textContent = id;
+    });
 
-        function displayWelcomeMessage(username) {
-            const welcomeMessage = document.createElement('p');
-            welcomeMessage.innerHTML = `<strong>System:</strong> Welcome, <em>${username}</em>!`;
-            chatDisplay.appendChild(welcomeMessage);
-        }
+    peer.on('connection', c => {
+      conn = c;
+      conn.on('data', data => addMessage(data, false));
+      alert("Connected to peer: " + conn.peer);
+    });
 
-        sendButton.addEventListener('click', sendMessage);
-        messageInput.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                sendMessage();
-            }
-        });
+    function connectToPeer() {
+      const id = peerIdInput.value.trim();
+      if (!id) return alert("Enter peer ID");
+      conn = peer.connect(id);
+      conn.on('open', () => alert("Connected!"));
+      conn.on('data', data => addMessage(data, false));
+    }
 
-        function sendMessage() {
-            if (!currentUsername) {
-                alert('Please set a username first.');
-                return;
-            }
-            const messageText = messageInput.value.trim();
-            if (messageText !== '') {
-                const newMessage = document.createElement('p');
-                newMessage.innerHTML = `<strong>${currentUsername}:</strong> ${messageText}`;
-                chatDisplay.appendChild(newMessage);
-                messageInput.value = '';
-                chatDisplay.scrollTop = chatDisplay.scrollHeight;
-            }
-        }
-    </script>
+    function sendMessage() {
+      const msg = msgInput.value.trim();
+      if (!msg || !conn || conn.open === false) return;
+      conn.send(msg);
+      addMessage(msg, true);
+      msgInput.value = '';
+    }
+
+    function addMessage(msg, isMe) {
+      const div = document.createElement('div');
+      div.className = 'msg' + (isMe ? ' me' : '');
+      div.textContent = msg;
+      messages.appendChild(div);
+      messages.scrollTop = messages.scrollHeight;
+    }
+  </script>
 </body>
 </html>
