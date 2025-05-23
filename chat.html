@@ -27,6 +27,97 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
             background: #555;
         }
+
+        /* Dark mode styles */
+        body.dark {
+            @apply bg-gray-900 text-gray-100;
+        }
+        body.dark #app-container {
+            @apply bg-gray-800;
+        }
+        body.dark .border-gray-200 {
+            @apply border-gray-700;
+        }
+        body.dark .bg-white {
+            @apply bg-gray-800;
+        }
+        body.dark .text-gray-900 {
+            @apply text-gray-100;
+        }
+        body.dark .text-gray-700 {
+            @apply text-gray-300;
+        }
+        body.dark .text-gray-500 {
+            @apply text-gray-400;
+        }
+        body.dark .bg-gray-100 {
+            @apply bg-gray-700;
+        }
+        body.dark .bg-gray-50 {
+            @apply bg-gray-900;
+        }
+        body.dark .bg-gray-200 {
+            @apply bg-gray-700;
+        }
+        body.dark .border-gray-300 {
+            @apply border-gray-600;
+        }
+        body.dark .bg-blue-50 {
+            @apply bg-blue-900;
+        }
+        body.dark .border-blue-200 {
+            @apply border-blue-700;
+        }
+        body.dark .text-blue-800 {
+            @apply text-blue-200;
+        }
+        body.dark .text-blue-600 {
+            @apply text-blue-400;
+        }
+        body.dark .text-blue-500 {
+            @apply text-blue-400;
+        }
+        body.dark .bg-purple-300 {
+            @apply bg-purple-700;
+        }
+        body.dark .bg-gray-300 {
+            @apply bg-gray-600;
+        }
+        body.dark .hover\:bg-gray-100:hover {
+            @apply hover:bg-gray-700;
+        }
+        body.dark .bg-blue-100 {
+            @apply bg-blue-700;
+        }
+        body.dark .text-blue-200 {
+            @apply text-blue-300;
+        }
+        body.dark .hover\:bg-gray-300:hover {
+            @apply hover:bg-gray-600;
+        }
+        /* Fix for timestamp blur/overlap */
+        .message-bubble {
+            position: relative; /* Ensure positioning context for timestamp */
+            padding-bottom: 1.5rem; /* Make space for timestamp */
+        }
+        .message-timestamp {
+            position: absolute;
+            bottom: 0.25rem; /* Adjust as needed */
+            font-size: 0.75rem; /* text-xs */
+            opacity: 0.8; /* Slightly less prominent */
+            white-space: nowrap; /* Prevent timestamp from wrapping */
+        }
+        .message-bubble.bg-blue-500 .message-timestamp {
+            right: 0.5rem;
+            color: rgba(255, 255, 255, 0.7); /* Lighter color for dark background */
+        }
+        .message-bubble.bg-gray-200 .message-timestamp {
+            left: 0.5rem;
+            color: rgba(75, 85, 99, 0.7); /* Darker color for light background */
+        }
+        body.dark .message-bubble.bg-gray-200 .message-timestamp {
+            color: rgba(209, 213, 219, 0.7); /* Lighter color for dark background in dark mode */
+        }
     </style>
 </head>
 <body class="light">
@@ -58,9 +149,14 @@
             </div>
 
             <div class="flex-1 overflow-y-auto custom-scrollbar">
-                <h3 class="text-lg font-semibold px-2 pt-2 pb-2 text-gray-700">Direct Messages</h3>
+                <div class="flex items-center justify-between px-2 pt-2 pb-2">
+                    <h3 class="text-lg font-semibold text-gray-700">Direct Messages</h3>
+                    <button id="add-friend-sidebar-btn" class="p-1 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200" title="Add Friend">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-plus"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                    </button>
+                </div>
                 <div id="direct-messages-list">
-                    <p class="text-sm text-gray-500 px-2" id="no-direct-chats">No direct chats yet. Add a friend!</p>
+                    <p class="text-sm text-gray-500 px-2" id="no-direct-chats">No direct chats yet. Click '+' to add a friend!</p>
                 </div>
 
                 <h3 class="text-lg font-semibold px-2 pt-4 pb-2 text-gray-700">Groups</h3>
@@ -105,6 +201,10 @@
             <div class="mb-4">
                 <label for="friend-id-input" class="block text-gray-700 text-sm font-semibold mb-2">Friend's Peer ID</label>
                 <input type="text" id="friend-id-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-blue-400" placeholder="Enter friend's full Peer ID">
+            </div>
+            <div class="mb-4">
+                <label for="friend-name-input" class="block text-gray-700 text-sm font-semibold mb-2">Friend's Display Name (Optional)</label>
+                <input type="text" id="friend-name-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-blue-400" placeholder="e.g., John Doe">
             </div>
             <p id="add-friend-status" class="text-sm text-gray-600 mb-4"></p>
             <div class="flex justify-end space-x-4">
@@ -163,10 +263,12 @@
         const createGroupBtn = document.getElementById('create-group-btn');
         const themeToggleBtn = document.getElementById('theme-toggle-btn');
         const searchInput = document.getElementById('search-input');
+        const addFriendSidebarBtn = document.getElementById('add-friend-sidebar-btn'); // New button reference
 
         // Modals
         const addFriendModal = document.getElementById('add-friend-modal');
         const friendIdInput = document.getElementById('friend-id-input');
+        const friendNameInput = document.getElementById('friend-name-input'); // New input for friend name
         const addFriendStatus = document.getElementById('add-friend-status');
         const cancelAddFriendBtn = document.getElementById('cancel-add-friend-btn');
         const confirmAddFriendBtn = document.getElementById('confirm-add-friend-btn');
@@ -211,12 +313,20 @@
             localStorage.setItem(LS_GROUPS_KEY, JSON.stringify(groups));
         }
 
+        function isImageUrl(url) {
+            return (url.match(/\.(jpeg|jpg|gif|png|webp)$/) != null);
+        }
+
+        function isVideoUrl(url) {
+            return (url.match(/\.(mp4|webm|ogg)$/) != null);
+        }
+
         function addMessageToDisplay(message, senderId, isMe = false, chatType = 'user') {
             const messageElement = document.createElement('div');
             messageElement.className = `flex mb-2 ${isMe ? 'justify-end' : 'justify-start'}`;
 
             const bubble = document.createElement('div');
-            bubble.className = `max-w-[70%] p-3 rounded-lg shadow-sm relative ${
+            bubble.className = `message-bubble max-w-[70%] p-3 rounded-lg shadow-sm relative ${
                 isMe ? 'bg-blue-500 text-white rounded-br-none' : 'bg-gray-200 text-gray-900 rounded-bl-none'
             }`;
 
@@ -224,17 +334,67 @@
                 const senderName = getFriendName(senderId) || senderId.substring(0, 5); // Display short ID if no name
                 const senderSpan = document.createElement('p');
                 senderSpan.className = 'text-xs font-semibold text-gray-600 mb-1';
+                bubble.classList.add('dark:text-gray-300'); // Dark mode adjustment
                 senderSpan.textContent = senderName;
                 bubble.appendChild(senderSpan);
             }
 
-            const textSpan = document.createElement('p');
-            textSpan.className = 'text-sm';
-            textSpan.textContent = message;
-            bubble.appendChild(textSpan);
+            // Handle URLs for images/videos/links
+            const urlRegex = /(https?:\/\/[^\s]+)/g;
+            if (urlRegex.test(message)) {
+                const parts = message.split(urlRegex);
+                parts.forEach(part => {
+                    if (urlRegex.test(part)) {
+                        if (isImageUrl(part)) {
+                            const img = document.createElement('img');
+                            img.src = part;
+                            img.alt = 'Image';
+                            img.className = 'max-w-full h-auto rounded-md my-1';
+                            img.onerror = () => {
+                                const link = document.createElement('a');
+                                link.href = part;
+                                link.textContent = part;
+                                link.target = '_blank';
+                                link.className = 'text-blue-300 underline';
+                                bubble.appendChild(link);
+                            };
+                            bubble.appendChild(img);
+                        } else if (isVideoUrl(part)) {
+                            const video = document.createElement('video');
+                            video.src = part;
+                            video.controls = true;
+                            video.className = 'max-w-full h-auto rounded-md my-1';
+                            video.onerror = () => {
+                                const link = document.createElement('a');
+                                link.href = part;
+                                link.textContent = part;
+                                link.target = '_blank';
+                                link.className = 'text-blue-300 underline';
+                                bubble.appendChild(link);
+                            };
+                            bubble.appendChild(video);
+                        } else {
+                            const link = document.createElement('a');
+                            link.href = part;
+                            link.textContent = part;
+                            link.target = '_blank';
+                            link.className = 'text-blue-300 underline';
+                            bubble.appendChild(link);
+                        }
+                    } else if (part) {
+                        const textNode = document.createTextNode(part);
+                        bubble.appendChild(textNode);
+                    }
+                });
+            } else {
+                const textSpan = document.createElement('p');
+                textSpan.className = 'text-sm';
+                textSpan.textContent = message;
+                bubble.appendChild(textSpan);
+            }
 
             const timestampSpan = document.createElement('span');
-            timestampSpan.className = `absolute bottom-1 text-xs ${isMe ? 'right-2 text-blue-200' : 'left-2 text-gray-500'}`;
+            timestampSpan.className = `message-timestamp`; // Apply new class for styling
             timestampSpan.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             bubble.appendChild(timestampSpan);
 
@@ -260,7 +420,7 @@
                     friendElement.className = `flex items-center p-3 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors duration-200 ${activeChat.type === 'user' && activeChat.id === friend.id ? 'bg-blue-100' : ''}`;
                     friendElement.innerHTML = `
                         <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white font-bold mr-3">
-                            ${friend.name ? friend.name[0].toUpperCase() : friend.id[0].toUpperCase()}
+                            ${(friend.name || friend.id)[0].toUpperCase()}
                         </div>
                         <div>
                             <p class="font-semibold">${friend.name || friend.id.substring(0, 5)}</p>
@@ -303,8 +463,6 @@
             messagesDisplay.innerHTML = ''; // Clear previous messages
             initialChatMessage.classList.add('hidden'); // Hide initial message
 
-            // Here, you'd load chat history from localStorage if you stored it.
-            // For simplicity, we'll just show new messages.
             addMessageToDisplay(`You are now chatting in ${chatInfo.name}.`, myId, false, 'system');
             updateFriendListUI(); // Update UI to highlight selected chat
             updateGroupListUI();
@@ -343,7 +501,6 @@
                 addFriendStatus.textContent = `Incoming connection from ${conn.peer.substring(0, 5)}.`;
                 addMessageToDisplay(`Incoming connection from ${conn.peer.substring(0, 5)}.`, conn.peer, false, 'system');
 
-                // If not already connected to this peer, establish connection
                 if (!directConnections.has(conn.peer)) {
                     setupConnection(conn);
                     // Automatically add to friends list upon successful connection
@@ -355,7 +512,7 @@
                 } else {
                     console.log(`Already connected to ${conn.peer}.`);
                     conn.on('open', () => conn.send('Already connected to you.'));
-                    conn.close(); // Close the new incoming connection if already active
+                    conn.close();
                 }
             });
 
@@ -379,15 +536,32 @@
 
             conn.on('data', (data) => {
                 console.log(`Received data from ${conn.peer}:`, data);
-                if (activeChat.type === 'user' && activeChat.id === conn.peer) {
-                    addMessageToDisplay(data, conn.peer, false, 'user');
-                } else if (activeChat.type === 'group' && activeChat.members.includes(conn.peer)) {
-                    // If in a group chat, display message from any group member
-                    addMessageToDisplay(data, conn.peer, false, 'group');
-                } else {
-                    // Handle messages from non-active chats (e.g., show notification)
-                    console.log(`Message from non-active chat ${conn.peer}: ${data}`);
-                    // You could implement a simple notification here
+                try {
+                    const parsedData = JSON.parse(data);
+                    if (parsedData.type === 'group_message' && parsedData.groupId && parsedData.senderId) {
+                        const targetGroup = groups.find(g => g.id === parsedData.groupId);
+                        if (targetGroup && targetGroup.members.includes(myId)) {
+                            if (activeChat.type === 'group' && activeChat.id === parsedData.groupId) {
+                                addMessageToDisplay(parsedData.text, parsedData.senderId, false, 'group');
+                            } else {
+                                console.log(`New message in group ${targetGroup.name} from ${parsedData.senderId.substring(0, 5)}: ${parsedData.text}`);
+                            }
+                        }
+                    } else {
+                        // Direct message (could be string or non-group JSON)
+                        if (activeChat.type === 'user' && activeChat.id === conn.peer) {
+                            addMessageToDisplay(data, conn.peer, false, 'user');
+                        } else {
+                             console.log(`Direct message from non-active user ${conn.peer}: ${data}`);
+                        }
+                    }
+                } catch (e) {
+                    // Not JSON, treat as a regular direct message
+                    if (activeChat.type === 'user' && activeChat.id === conn.peer) {
+                        addMessageToDisplay(data, conn.peer, false, 'user');
+                    } else {
+                        console.log(`Direct message from non-active user ${conn.peer}: ${data}`);
+                    }
                 }
             });
 
@@ -395,7 +569,6 @@
                 console.log(`Connection closed with ${conn.peer}`);
                 addMessageToDisplay(`Disconnected from ${conn.peer.substring(0, 5)}.`, conn.peer, false, 'system');
                 directConnections.delete(conn.peer);
-                // If the disconnected peer was the active chat, go back to a neutral state
                 if (activeChat.id === conn.peer) {
                     activeChat = { type: null, id: null, name: null };
                     currentChatName.textContent = 'Select a chat';
@@ -415,7 +588,7 @@
         }
 
         // --- Event Listeners ---
-        window.onload = initializePeer; // Initialize PeerJS when window loads
+        window.onload = initializePeer;
 
         myPeerIdSpan.addEventListener('click', () => {
             if (myId) {
@@ -424,20 +597,29 @@
                     setTimeout(() => { myPeerIdSpan.textContent = myId; }, 1500);
                 }).catch(err => {
                     console.error('Failed to copy ID:', err);
-                    alert('Failed to copy ID. Please copy manually.'); // Fallback for browsers without clipboard API
+                    alert('Failed to copy ID. Please copy manually.');
                 });
             }
         });
 
-        // Add Friend Modal Logic
-        document.getElementById('no-direct-chats').addEventListener('click', () => showModal(addFriendModal));
+        // Add Friend Modal Logic (Now with optional name)
+        addFriendSidebarBtn.addEventListener('click', () => {
+            showModal(addFriendModal);
+            friendIdInput.value = '';
+            friendNameInput.value = ''; // Clear name input
+            addFriendStatus.textContent = '';
+        });
+
         cancelAddFriendBtn.addEventListener('click', () => {
             hideModal(addFriendModal);
             friendIdInput.value = '';
+            friendNameInput.value = '';
             addFriendStatus.textContent = '';
         });
+
         confirmAddFriendBtn.addEventListener('click', () => {
             const friendId = friendIdInput.value.trim();
+            const friendName = friendNameInput.value.trim();
             if (!friendId || friendId === myId) {
                 addFriendStatus.textContent = 'Please enter a valid, different Peer ID.';
                 return;
@@ -445,7 +627,7 @@
 
             if (directConnections.has(friendId)) {
                 addFriendStatus.textContent = `Already connected or attempting to connect to ${friendId.substring(0, 5)}.`;
-                selectChat({ type: 'user', id: friendId, name: getFriendName(friendId) || friendId.substring(0, 5) });
+                selectChat({ type: 'user', id: friendId, name: friendName || friendId.substring(0, 5) });
                 hideModal(addFriendModal);
                 return;
             }
@@ -454,13 +636,13 @@
             const conn = peer.connect(friendId);
             setupConnection(conn);
 
-            // Add to local friends list immediately
             if (!friends.some(f => f.id === friendId)) {
-                friends.push({ id: friendId, name: `Friend ${friendId.substring(0, 5)}` });
+                friends.push({ id: friendId, name: friendName || `Friend ${friendId.substring(0, 5)}` });
                 saveFriends();
                 updateFriendListUI();
             }
             friendIdInput.value = '';
+            friendNameInput.value = '';
         });
 
         // Create Group Modal Logic
@@ -470,20 +652,18 @@
             addMemberIdInput.value = '';
             selectedMembersList.innerHTML = '';
             createGroupStatus.textContent = '';
-            // Add current user's ID to selected members by default for group creation
             if (myId) {
                 const listItem = document.createElement('li');
                 listItem.className = 'flex items-center justify-between p-2 bg-blue-100 rounded-md mb-1';
                 listItem.textContent = `You (${myId.substring(0,5)})`;
                 selectedMembersList.appendChild(listItem);
             }
-            // Temporarily store selected members for the modal
             groupMembers.set('temp_group_members', new Set([myId]));
         });
 
         cancelCreateGroupBtn.addEventListener('click', () => {
             hideModal(createGroupModal);
-            groupMembers.delete('temp_group_members'); // Clear temp members
+            groupMembers.delete('temp_group_members');
         });
 
         addMemberBtn.addEventListener('click', () => {
@@ -529,12 +709,12 @@
                 createGroupStatus.textContent = 'Please enter a group name.';
                 return;
             }
-            if (members.length < 2) { // At least current user + one other
+            if (members.length < 2) {
                 createGroupStatus.textContent = 'Please add at least one other member to the group.';
                 return;
             }
 
-            const newGroupId = `group_${Date.now()}`; // Simple unique ID
+            const newGroupId = `group_${Date.now()}`;
             const newGroup = { id: newGroupId, name: groupName, members: members };
             groups.push(newGroup);
             saveGroups();
@@ -574,7 +754,7 @@
                         if (memberId !== myId) {
                             const conn = directConnections.get(memberId);
                             if (conn && conn.open) {
-                                conn.send(JSON.stringify(groupMessage)); // Send as JSON to distinguish group messages
+                                conn.send(JSON.stringify(groupMessage));
                             } else {
                                 console.warn(`Could not send message to ${memberId.substring(0, 5)} in group ${group.name}: Not connected.`);
                             }
@@ -583,43 +763,6 @@
                 }
             }
         });
-
-        // Handle incoming group messages
-        peer.on('connection', (conn) => {
-            // ... (existing connection setup) ...
-            conn.on('data', (data) => {
-                try {
-                    const parsedData = JSON.parse(data);
-                    if (parsedData.type === 'group_message' && parsedData.groupId && parsedData.senderId) {
-                        const targetGroup = groups.find(g => g.id === parsedData.groupId);
-                        if (targetGroup && targetGroup.members.includes(myId)) { // Ensure I am a member of this group
-                            if (activeChat.type === 'group' && activeChat.id === parsedData.groupId) {
-                                addMessageToDisplay(parsedData.text, parsedData.senderId, false, 'group');
-                            } else {
-                                // Message for a non-active group chat
-                                console.log(`New message in group ${targetGroup.name} from ${parsedData.senderId.substring(0, 5)}: ${parsedData.text}`);
-                                // You could add a notification or badge here
-                            }
-                        }
-                    } else {
-                        // Regular direct message
-                        if (activeChat.type === 'user' && activeChat.id === conn.peer) {
-                            addMessageToDisplay(data, conn.peer, false, 'user');
-                        } else {
-                             console.log(`Direct message from non-active user ${conn.peer}: ${data}`);
-                        }
-                    }
-                } catch (e) {
-                    // Not JSON, treat as a regular direct message
-                    if (activeChat.type === 'user' && activeChat.id === conn.peer) {
-                        addMessageToDisplay(data, conn.peer, false, 'user');
-                    } else {
-                        console.log(`Direct message from non-active user ${conn.peer}: ${data}`);
-                    }
-                }
-            });
-        });
-
 
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -646,18 +789,10 @@
         updateFriendListUI();
         updateGroupListUI();
 
-        // Add friend button in sidebar (for direct access to modal)
-        const addFriendSidebarBtn = document.createElement('button');
-        addFriendSidebarBtn.className = 'w-full p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 mt-4';
-        addFriendSidebarBtn.textContent = 'Add New Friend';
-        addFriendSidebarBtn.onclick = () => showModal(addFriendModal);
-        directMessagesList.parentNode.insertBefore(addFriendSidebarBtn, directMessagesList.nextSibling);
-
         // Search functionality (basic client-side filter)
         searchInput.addEventListener('input', () => {
             const searchTerm = searchInput.value.toLowerCase();
 
-            // Filter direct messages
             directMessagesList.querySelectorAll('.flex.items-center').forEach(item => {
                 const name = item.querySelector('.font-semibold').textContent.toLowerCase();
                 if (name.includes(searchTerm)) {
@@ -667,7 +802,6 @@
                 }
             });
 
-            // Filter groups
             groupsList.querySelectorAll('.flex.items-center').forEach(item => {
                 const name = item.querySelector('.font-semibold').textContent.toLowerCase();
                 if (name.includes(searchTerm)) {
