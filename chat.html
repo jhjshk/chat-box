@@ -1,108 +1,769 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Chit Chat - Homepage</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f3f6fd;
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            flex-direction: column;
-            gap: 25px; /* Increased gap for better spacing */
-            text-align: center;
-            padding: 20px;
-            box-sizing: border-box;
-        }
+import React, { useState, useEffect, createContext, useContext, useRef } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, signInAnonymously } from 'firebase/auth';
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, limit, updateDoc } from 'firebase/firestore';
 
-        .container {
-            background: #fff;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            border-radius: 12px;
-            padding: 40px; /* More padding */
-            max-width: 700px; /* Wider container */
-            width: 100%;
-            text-align: center;
-        }
+// Lucide React Icons (replace with actual imports if using a bundler, or inline SVGs)
+const Mail = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>;
+const Lock = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-lock"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
+const User = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+const MessageSquare = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-square"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
+const Users = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87L16 14"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+const Search = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-search"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>;
+const Plus = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus"><path d="M12 5v14"/><path d="M5 12h14"/></svg>;
+const Send = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-send"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></svg>;
+const LogOut = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="17 16 22 12 17 8"/><line x1="22" x2="11" y1="12" y2="12"/></svg>;
+const Settings = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-settings"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.78 1.28a2 2 0 0 0 .73 2.73l.04.02a2 2 0 0 1 .97 1.95v.44a2 2 0 0 1-.97 1.95l-.04.02a2 2 0 0 0-.73 2.73l.78 1.28a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.78-1.28a2 2 0 0 0-.73-2.73l-.04-.02a2 2 0 0 1-.97-1.95v-.44a2 2 0 0 1 .97-1.95l.04-.02a2 2 0 0 0 .73-2.73l-.78-1.28a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
 
-        h1 {
-            color: #3B82F6; /* Blue */
-            margin-bottom: 25px; /* More margin */
-            font-size: 2.5em; /* Larger heading */
-            font-weight: bold;
-        }
+// Firebase Context to provide Firebase instances to components
+const FirebaseContext = createContext(null);
 
-        p {
-            color: #555;
-            line-height: 1.6;
-            margin-bottom: 20px;
-        }
+// Firebase Provider Component
+const FirebaseProvider = ({ children }) => {
+    const [app, setApp] = useState(null);
+    const [auth, setAuth] = useState(null);
+    const [db, setDb] = useState(null);
+    const [currentUser, setCurrentUser] = useState(null);
+    const [isAuthReady, setIsAuthReady] = useState(false);
+    const [loading, setLoading] = useState(true);
 
-        .button-group {
-            display: flex;
-            flex-direction: column; /* Stack buttons vertically */
-            gap: 15px; /* Space between buttons */
-            margin-top: 30px;
-            max-width: 300px; /* Max width for button group */
-            margin-left: auto;
-            margin-right: auto;
-        }
+    useEffect(() => {
+        try {
+            // Retrieve Firebase config and app ID from global variables
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
-        .button {
-            background: #22C55E; /* Green */
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1.1em;
-            font-weight: bold;
-            text-decoration: none; /* Remove underline for links */
-            transition: background 0.2s ease, transform 0.1s ease;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+            // Initialize Firebase App
+            const firebaseApp = initializeApp(firebaseConfig);
+            setApp(firebaseApp);
 
-        .button:hover {
-            background: #16A34A; /* Darker green */
-            transform: translateY(-2px); /* Slight lift effect */
-        }
+            // Initialize Auth and Firestore
+            const firebaseAuth = getAuth(firebaseApp);
+            const firestoreDb = getFirestore(firebaseApp);
+            setAuth(firebaseAuth);
+            setDb(firestoreDb);
 
-        .button.secondary {
-            background: #3B82F6; /* Blue */
-        }
+            // Sign in with custom token or anonymously
+            const signIn = async () => {
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(firebaseAuth, initialAuthToken);
+                        console.log("Signed in with custom token.");
+                    } else {
+                        await signInAnonymously(firebaseAuth);
+                        console.log("Signed in anonymously.");
+                    }
+                } catch (error) {
+                    console.error("Firebase sign-in error:", error);
+                } finally {
+                    setLoading(false);
+                }
+            };
 
-        .button.secondary:hover {
-            background: #2563EB; /* Darker blue */
-        }
+            // Listen for auth state changes
+            const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
+                setCurrentUser(user);
+                setIsAuthReady(true);
+                setLoading(false); // Set loading to false once auth state is known
+            });
 
-        /* Responsive adjustments */
-        @media (max-width: 600px) {
-            .container {
-                padding: 25px;
-                border-radius: 0; /* Full width on small screens */
+            if (!firebaseAuth.currentUser) {
+                signIn(); // Attempt sign-in if no current user
+            } else {
+                setLoading(false); // If user already exists, stop loading
             }
-            h1 {
-                font-size: 2em;
-            }
-            .button-group {
-                max-width: 100%;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>Welcome to Chit Chat!</h1>
-        <p>Connect directly with your friends using Peer-to-Peer technology. No servers, just direct communication!</p>
 
-        <div class="button-group">
-            <a href="chat.html" class="button">Start a Direct Chat</a>
-            <a href="#" class="button secondary" onclick="alert('Group chat in a purely P2P static setup is complex and typically requires a central server for coordination. This feature is conceptual here.'); return false;">Create/Join Group Chat</a>
+            return () => unsubscribe(); // Cleanup auth listener
+        } catch (error) {
+            console.error("Error initializing Firebase:", error);
+            setLoading(false);
+        }
+    }, []);
+
+    const value = { app, auth, db, currentUser, isAuthReady, loading };
+
+    return (
+        <FirebaseContext.Provider value={value}>
+            {children}
+        </FirebaseContext.Provider>
+    );
+};
+
+// Custom hook to use Firebase context
+const useFirebase = () => useContext(FirebaseContext);
+
+// --- Auth Component ---
+const Auth = () => {
+    const { auth, db, isAuthReady, loading } = useFirebase();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [username, setUsername] = useState('');
+    const [isRegistering, setIsRegistering] = useState(false);
+    const [error, setError] = useState('');
+    const [message, setMessage] = useState('');
+
+    const handleAuth = async (e) => {
+        e.preventDefault();
+        setError('');
+        setMessage('');
+
+        if (!isAuthReady) {
+            setError('Firebase is not ready yet. Please wait.');
+            return;
+        }
+
+        try {
+            if (isRegistering) {
+                // Register
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // Store user data in Firestore
+                await setDoc(doc(db, 'users', user.uid), {
+                    email: user.email,
+                    username: username,
+                    createdAt: serverTimestamp(),
+                    profilePicUrl: '', // Placeholder
+                    status: 'online'
+                });
+                setMessage('Registration successful! Logging in...');
+            } else {
+                // Login
+                await signInWithEmailAndPassword(auth, email, password);
+                setMessage('Login successful!');
+            }
+        } catch (err) {
+            console.error("Auth error:", err);
+            setError(err.message);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-100">
+                <div className="text-xl font-semibold text-gray-700">Loading Firebase...</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 p-4">
+            <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md transform transition-all duration-300 hover:scale-105">
+                <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">
+                    {isRegistering ? 'Sign Up for Chit Chat' : 'Welcome Back to Chit Chat'}
+                </h2>
+                {error && <p className="bg-red-100 text-red-700 p-3 rounded-md mb-4 text-sm">{error}</p>}
+                {message && <p className="bg-green-100 text-green-700 p-3 rounded-md mb-4 text-sm">{message}</p>}
+                <form onSubmit={handleAuth} className="space-y-6">
+                    {isRegistering && (
+                        <div>
+                            <label className="block text-gray-700 text-sm font-semibold mb-2" htmlFor="username">
+                                <User className="inline-block mr-2 text-blue-500" size={18} /> Username
+                            </label>
+                            <input
+                                type="text"
+                                id="username"
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition duration-200"
+                                placeholder="Choose a username"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                required={isRegistering}
+                            />
+                        </div>
+                    )}
+                    <div>
+                        <label className="block text-gray-700 text-sm font-semibold mb-2" htmlFor="email">
+                            <Mail className="inline-block mr-2 text-blue-500" size={18} /> Email
+                        </label>
+                        <input
+                            type="email"
+                            id="email"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition duration-200"
+                            placeholder="your@example.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-gray-700 text-sm font-semibold mb-2" htmlFor="password">
+                            <Lock className="inline-block mr-2 text-blue-500" size={18} /> Password
+                        </label>
+                        <input
+                            type="password"
+                            id="password"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition duration-200"
+                            placeholder="********"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold text-lg hover:bg-blue-700 transition duration-300 shadow-md hover:shadow-lg"
+                    >
+                        {isRegistering ? 'Sign Up' : 'Log In'}
+                    </button>
+                </form>
+                <p className="text-center text-gray-600 mt-6">
+                    {isRegistering ? 'Already have an account?' : "Don't have an account?"}{' '}
+                    <button
+                        type="button"
+                        onClick={() => setIsRegistering(!isRegistering)}
+                        className="text-blue-600 font-semibold hover:underline"
+                    >
+                        {isRegistering ? 'Log In' : 'Sign Up'}
+                    </button>
+                </p>
+            </div>
         </div>
-    </div>
-</body>
-</html>
+    );
+};
+
+// --- Dashboard Component ---
+const Dashboard = () => {
+    const { auth, db, currentUser, isAuthReady, loading } = useFirebase();
+    const [activeChat, setActiveChat] = useState(null); // { type: 'user' | 'group', id: 'chatId' | 'groupId', name: 'Chat Name' }
+    const [users, setUsers] = useState([]);
+    const [groups, setGroups] = useState([]);
+    const [myProfile, setMyProfile] = useState(null);
+    const [isCreatingGroup, setIsCreatingGroup] = useState(false);
+    const [newGroupName, setNewGroupName] = useState('');
+    const [selectedUsersForGroup, setSelectedUsersForGroup] = useState([]);
+    const [showSettingsModal, setShowSettingsModal] = useState(false);
+    const [theme, setTheme] = useState(localStorage.getItem('chitchat-theme') || 'light');
+
+    useEffect(() => {
+        document.documentElement.classList.remove('light', 'dark');
+        document.documentElement.classList.add(theme);
+        localStorage.setItem('chitchat-theme', theme);
+    }, [theme]);
+
+    const toggleTheme = () => {
+        setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
+    };
+
+    useEffect(() => {
+        if (!isAuthReady || !currentUser || !db) return;
+
+        // Fetch current user's profile
+        const myProfileRef = doc(db, 'users', currentUser.uid);
+        const unsubscribeMyProfile = onSnapshot(myProfileRef, (docSnap) => {
+            if (docSnap.exists()) {
+                setMyProfile({ id: docSnap.id, ...docSnap.data() });
+            }
+        });
+
+        // Fetch all users (for contacts and group creation)
+        const usersQuery = query(collection(db, 'users'));
+        const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
+            const fetchedUsers = snapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() }))
+                .filter(user => user.id !== currentUser.uid); // Exclude self
+            setUsers(fetchedUsers);
+        });
+
+        // Fetch groups where current user is a member
+        const groupsQuery = query(collection(db, 'groups'), where('members', 'array-contains', currentUser.uid));
+        const unsubscribeGroups = onSnapshot(groupsQuery, (snapshot) => {
+            const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setGroups(fetchedGroups);
+        });
+
+        return () => {
+            unsubscribeMyProfile();
+            unsubscribeUsers();
+            unsubscribeGroups();
+        };
+    }, [isAuthReady, currentUser, db]);
+
+    const handleLogout = async () => {
+        try {
+            await signOut(auth);
+            // Clear any local storage related to chat state if necessary
+        } catch (error) {
+            console.error("Logout error:", error);
+        }
+    };
+
+    const startChatWithUser = async (user) => {
+        // Create a unique chat ID for 1-to-1 chat
+        const participants = [currentUser.uid, user.id].sort();
+        const chatId = participants.join('_'); // e.g., 'user1_user2'
+
+        // Check if chat document exists, if not, create it
+        const chatRef = doc(db, 'chats', chatId);
+        const chatSnap = await getDoc(chatRef);
+
+        if (!chatSnap.exists()) {
+            await setDoc(chatRef, {
+                participants: participants,
+                createdAt: serverTimestamp(),
+                lastMessage: '',
+                lastMessageTimestamp: null
+            });
+        }
+        setActiveChat({ type: 'user', id: chatId, name: user.username, peerId: user.id });
+    };
+
+    const startGroupChat = (group) => {
+        setActiveChat({ type: 'group', id: group.id, name: group.name });
+    };
+
+    const handleCreateGroup = async () => {
+        if (!newGroupName.trim() || selectedUsersForGroup.length === 0) {
+            alert('Please enter a group name and select at least one member.');
+            return;
+        }
+
+        const members = [currentUser.uid, ...selectedUsersForGroup];
+        try {
+            const newGroupRef = await addDoc(collection(db, 'groups'), {
+                name: newGroupName,
+                members: members,
+                adminIds: [currentUser.uid], // Creator is admin
+                createdAt: serverTimestamp(),
+                lastMessage: '',
+                lastMessageTimestamp: null
+            });
+            alert(`Group "${newGroupName}" created!`);
+            setIsCreatingGroup(false);
+            setNewGroupName('');
+            setSelectedUsersForGroup([]);
+            startGroupChat({ id: newGroupRef.id, name: newGroupName }); // Automatically open the new group chat
+        } catch (error) {
+            console.error("Error creating group:", error);
+            alert("Failed to create group. See console for details.");
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-100">
+                <div className="text-xl font-semibold text-gray-700">Loading user data...</div>
+            </div>
+        );
+    }
+
+    if (!currentUser || !myProfile) {
+        // This case should ideally not happen if FirebaseProvider handles auth correctly
+        // but as a fallback, if currentUser is null, it means not authenticated.
+        return <Auth />;
+    }
+
+    return (
+        <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+            {/* Left Sidebar */}
+            <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col shadow-lg">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <h2 className="text-2xl font-bold text-blue-600 dark:text-blue-400">Chit Chat</h2>
+                    <div className="flex items-center space-x-2">
+                        <button
+                            onClick={() => setIsCreatingGroup(true)}
+                            className="p-2 rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors duration-200"
+                            title="New Group"
+                        >
+                            <Plus size={20} />
+                        </button>
+                        <button
+                            onClick={toggleTheme}
+                            className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                            title="Toggle Theme"
+                        >
+                            {theme === 'light' ? '🌙' : '☀️'}
+                        </button>
+                        <button
+                            onClick={() => setShowSettingsModal(true)}
+                            className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
+                            title="Settings"
+                        >
+                            <Settings size={20} />
+                        </button>
+                        <button
+                            onClick={handleLogout}
+                            className="p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors duration-200"
+                            title="Logout"
+                        >
+                            <LogOut size={20} />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="p-4">
+                    <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="Search users or groups..."
+                            className="w-full p-2 pl-10 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                        />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" size={18} />
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto">
+                    <h3 className="text-lg font-semibold px-4 pt-4 pb-2 text-gray-700 dark:text-gray-300">Direct Messages</h3>
+                    {users.length === 0 && <p className="text-sm text-gray-500 px-4">No other users found.</p>}
+                    {users.map(user => (
+                        <div
+                            key={user.id}
+                            className={`flex items-center p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 ${activeChat?.type === 'user' && activeChat?.peerId === user.id ? 'bg-blue-100 dark:bg-blue-700' : ''}`}
+                            onClick={() => startChatWithUser(user)}
+                        >
+                            <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-white font-bold mr-3">
+                                {user.username ? user.username[0].toUpperCase() : 'U'}
+                            </div>
+                            <div>
+                                <p className="font-semibold">{user.username || user.email}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">Last message preview...</p>
+                            </div>
+                        </div>
+                    ))}
+
+                    <h3 className="text-lg font-semibold px-4 pt-4 pb-2 text-gray-700 dark:text-gray-300">Groups</h3>
+                    {groups.length === 0 && <p className="text-sm text-gray-500 px-4">No groups joined yet.</p>}
+                    {groups.map(group => (
+                        <div
+                            key={group.id}
+                            className={`flex items-center p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 ${activeChat?.type === 'group' && activeChat?.id === group.id ? 'bg-blue-100 dark:bg-blue-700' : ''}`}
+                            onClick={() => startGroupChat(group)}
+                        >
+                            <div className="w-10 h-10 rounded-full bg-purple-300 dark:bg-purple-600 flex items-center justify-center text-white font-bold mr-3">
+                                <Users size={20} />
+                            </div>
+                            <div>
+                                <p className="font-semibold">{group.name}</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">Last group message...</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Center Area (Chat Window) */}
+            <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-800">
+                {!activeChat ? (
+                    <div className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400 text-lg">
+                        Select a chat to start messaging
+                    </div>
+                ) : (
+                    <ChatWindow chat={activeChat} currentUser={myProfile} />
+                )}
+            </div>
+
+            {/* Right Sidebar (Optional User Info Panel - Placeholder) */}
+            {/* You can implement this to show user/group info when activeChat is selected */}
+            {/* <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col shadow-lg">
+                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                    <h3 className="text-xl font-semibold">User Info</h3>
+                </div>
+                <div className="flex-1 p-4">
+                    <p className="text-gray-600 dark:text-gray-300">Click on a chat to see details here.</p>
+                </div>
+            </div> */}
+
+            {/* New Group Modal */}
+            {isCreatingGroup && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
+                        <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">Create New Group</h2>
+                        <div className="mb-4">
+                            <label className="block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2" htmlFor="group-name">
+                                Group Name
+                            </label>
+                            <input
+                                type="text"
+                                id="group-name"
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-400"
+                                placeholder="Enter group name"
+                                value={newGroupName}
+                                onChange={(e) => setNewGroupName(e.target.value)}
+                            />
+                        </div>
+                        <div className="mb-6">
+                            <label className="block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2">
+                                Select Members
+                            </label>
+                            <div className="h-40 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-2 bg-gray-100 dark:bg-gray-700">
+                                {users.map(user => (
+                                    <div key={user.id} className="flex items-center mb-2">
+                                        <input
+                                            type="checkbox"
+                                            id={`user-${user.id}`}
+                                            className="mr-2 h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
+                                            checked={selectedUsersForGroup.includes(user.id)}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    setSelectedUsersForGroup([...selectedUsersForGroup, user.id]);
+                                                } else {
+                                                    setSelectedUsersForGroup(selectedUsersForGroup.filter(id => id !== user.id));
+                                                }
+                                            }}
+                                        />
+                                        <label htmlFor={`user-${user.id}`} className="text-gray-800 dark:text-gray-100">
+                                            {user.username || user.email}
+                                        </label>
+                                    </div>
+                                ))}
+                                {users.length === 0 && <p className="text-sm text-gray-500">No other users to add.</p>}
+                            </div>
+                        </div>
+                        <div className="flex justify-end space-x-4">
+                            <button
+                                onClick={() => setIsCreatingGroup(false)}
+                                className="px-5 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-100 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors duration-200"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleCreateGroup}
+                                className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                            >
+                                Create Group
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Settings Modal */}
+            {showSettingsModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
+                        <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">Settings</h2>
+                        <div className="mb-4">
+                            <label className="block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2">
+                                Theme
+                            </label>
+                            <div className="flex items-center space-x-4">
+                                <label className="inline-flex items-center">
+                                    <input
+                                        type="radio"
+                                        className="form-radio text-blue-600"
+                                        name="theme"
+                                        value="light"
+                                        checked={theme === 'light'}
+                                        onChange={toggleTheme}
+                                    />
+                                    <span className="ml-2 text-gray-800 dark:text-gray-100">Light</span>
+                                </label>
+                                <label className="inline-flex items-center">
+                                    <input
+                                        type="radio"
+                                        className="form-radio text-blue-600"
+                                        name="theme"
+                                        value="dark"
+                                        checked={theme === 'dark'}
+                                        onChange={toggleTheme}
+                                    />
+                                    <span className="ml-2 text-gray-800 dark:text-gray-100">Dark</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div className="flex justify-end">
+                            <button
+                                onClick={() => setShowSettingsModal(false)}
+                                className="px-5 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-100 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors duration-200"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+// --- ChatWindow Component ---
+const ChatWindow = ({ chat, currentUser }) => {
+    const { db } = useFirebase();
+    const [messages, setMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState('');
+    const messagesEndRef = useRef(null);
+    const [chatParticipants, setChatParticipants] = useState({}); // Map of userId to username
+
+    useEffect(() => {
+        if (!db || !chat) return;
+
+        let messagesRef;
+        let participantsIds = [];
+
+        if (chat.type === 'user') {
+            messagesRef = collection(db, 'chats', chat.id, 'messages');
+            participantsIds = chat.id.split('_');
+        } else if (chat.type === 'group') {
+            messagesRef = collection(db, 'groups', chat.id, 'messages');
+            // Fetch group members to get their usernames
+            const groupDocRef = doc(db, 'groups', chat.id);
+            const unsubscribeGroup = onSnapshot(groupDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    participantsIds = docSnap.data().members;
+                    fetchParticipantUsernames(participantsIds);
+                }
+            });
+            return () => unsubscribeGroup(); // Cleanup group listener
+        }
+
+        // Fetch usernames for all participants
+        const fetchParticipantUsernames = async (ids) => {
+            const names = {};
+            for (const id of ids) {
+                if (!names[id]) { // Avoid refetching
+                    const userDoc = await getDoc(doc(db, 'users', id));
+                    if (userDoc.exists()) {
+                        names[id] = userDoc.data().username || userDoc.data().email;
+                    } else {
+                        names[id] = 'Unknown User';
+                    }
+                }
+            }
+            setChatParticipants(prev => ({ ...prev, ...names }));
+        };
+
+        // Initial fetch for 1-to-1 chat participants
+        if (chat.type === 'user') {
+            fetchParticipantUsernames(participantsIds);
+        }
+
+        const q = query(messagesRef, orderBy('timestamp', 'asc'), limit(50)); // Limit to last 50 messages
+        const unsubscribeMessages = onSnapshot(q, (snapshot) => {
+            const fetchedMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setMessages(fetchedMessages);
+        });
+
+        return () => unsubscribeMessages();
+    }, [db, chat, currentUser]);
+
+    useEffect(() => {
+        // Scroll to bottom when messages load or new messages arrive
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
+
+    const handleSendMessage = async (e) => {
+        e.preventDefault();
+        if (!newMessage.trim() || !currentUser || !db) return;
+
+        let messagesCollectionRef;
+        if (chat.type === 'user') {
+            messagesCollectionRef = collection(db, 'chats', chat.id, 'messages');
+            // Update last message in chat document
+            await updateDoc(doc(db, 'chats', chat.id), {
+                lastMessage: newMessage.trim(),
+                lastMessageTimestamp: serverTimestamp()
+            });
+        } else if (chat.type === 'group') {
+            messagesCollectionRef = collection(db, 'groups', chat.id, 'messages');
+            // Update last message in group document
+            await updateDoc(doc(db, 'groups', chat.id), {
+                lastMessage: newMessage.trim(),
+                lastMessageTimestamp: serverTimestamp()
+            });
+        }
+
+        try {
+            await addDoc(messagesCollectionRef, {
+                senderId: currentUser.uid,
+                text: newMessage.trim(),
+                timestamp: serverTimestamp()
+            });
+            setNewMessage('');
+        } catch (error) {
+            console.error("Error sending message:", error);
+            alert("Failed to send message. See console for details.");
+        }
+    };
+
+    const formatTimestamp = (timestamp) => {
+        if (!timestamp) return '';
+        const date = timestamp.toDate();
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    return (
+        <div className="flex flex-col flex-1">
+            <div className="bg-white dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+                <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
+                    {chat.name}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {chat.type === 'user' ? 'Direct Message' : 'Group Chat'}
+                </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-900">
+                {messages.map(msg => (
+                    <div
+                        key={msg.id}
+                        className={`flex ${msg.senderId === currentUser.uid ? 'justify-end' : 'justify-start'}`}
+                    >
+                        <div
+                            className={`max-w-xs md:max-w-md p-3 rounded-lg shadow-sm relative ${
+                                msg.senderId === currentUser.uid
+                                    ? 'bg-blue-500 text-white rounded-br-none'
+                                    : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-none'
+                            }`}
+                        >
+                            {msg.senderId !== currentUser.uid && chat.type === 'group' && (
+                                <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
+                                    {chatParticipants[msg.senderId] || 'Loading...'}
+                                </p>
+                            )}
+                            <p className="text-sm">{msg.text}</p>
+                            <span className={`absolute bottom-1 text-xs ${msg.senderId === currentUser.uid ? 'right-2 text-blue-200' : 'left-2 text-gray-500 dark:text-gray-400'}`}>
+                                {formatTimestamp(msg.timestamp)}
+                            </span>
+                        </div>
+                    </div>
+                ))}
+                <div ref={messagesEndRef} /> {/* Scroll target */}
+            </div>
+
+            <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex items-center space-x-3">
+                <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Type a message..."
+                    className="flex-1 p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+                <button
+                    type="submit"
+                    className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md"
+                >
+                    <Send size={20} />
+                </button>
+            </form>
+        </div>
+    );
+};
+
+// --- Main App Component ---
+const App = () => {
+    const { currentUser, isAuthReady, loading } = useFirebase();
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
+                <div className="text-xl font-semibold text-gray-700 dark:text-gray-300">Initializing Chit Chat...</div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+            {isAuthReady && currentUser ? <Dashboard /> : <Auth />}
+        </div>
+    );
+};
+
+// Default export for the React App
+export default function AppWrapper() {
+    return (
+        <FirebaseProvider>
+            <App />
+        </FirebaseProvider>
+    );
+}
+
