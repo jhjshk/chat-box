@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Awesome P2P Chat</title>
+    <title>Chit Chat - Homepage</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -11,217 +12,97 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            flex-direction: column;
+            gap: 25px; /* Increased gap for better spacing */
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
         }
 
-        #chat-container {
+        .container {
             background: #fff;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             border-radius: 12px;
-            overflow: hidden;
-            max-width: 600px;
-            width: 95%;
-        }
-
-        #header {
-            background: #3B82F6;
-            color: white;
-            padding: 20px;
+            padding: 40px; /* More padding */
+            max-width: 700px; /* Wider container */
+            width: 100%;
             text-align: center;
-            font-size: 1.5em;
-            border-bottom: 1px solid #e0e0e0;
         }
 
-        #connection-info {
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            border-bottom: 1px solid #e0e0e0;
-            background: #f9f9f9;
-        }
-
-        #connection-info > div {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        #my-id {
+        h1 {
+            color: #3B82F6; /* Blue */
+            margin-bottom: 25px; /* More margin */
+            font-size: 2.5em; /* Larger heading */
             font-weight: bold;
-            color: #3B82F6;
         }
 
-        #peer-connect {
+        p {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .button-group {
             display: flex;
-            gap: 8px;
+            flex-direction: column; /* Stack buttons vertically */
+            gap: 15px; /* Space between buttons */
+            margin-top: 30px;
+            max-width: 300px; /* Max width for button group */
+            margin-left: auto;
+            margin-right: auto;
         }
 
-        #peer-id {
-            flex-grow: 1;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-        }
-
-        #connect-button {
-            background: #22C55E;
+        .button {
+            background: #22C55E; /* Green */
             color: white;
             border: none;
-            padding: 10px 15px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        #connect-button:hover {
-            background: #16A34A;
-        }
-
-        #messages {
-            height: 350px;
-            overflow-y: auto;
-            padding: 15px;
-            background: #f0f2f5;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .message {
-            padding: 10px 12px;
+            padding: 15px 30px;
             border-radius: 8px;
-            background: #e2e8f0;
-            align-self: flex-start;
-            max-width: 80%;
-            word-break: break-word;
-        }
-
-        .me {
-            background: #DCF8C6;
-            align-self: flex-end;
-        }
-
-        #input-area {
-            padding: 15px;
-            display: flex;
-            gap: 8px;
-            border-top: 1px solid #e0e0e0;
-            background: #f9f9f9;
-            border-radius: 0 0 12px 12px;
-        }
-
-        #msg-input {
-            flex-grow: 1;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-        }
-
-        #send-button {
-            background: #3B82F6;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 6px;
             cursor: pointer;
+            font-size: 1.1em;
             font-weight: bold;
+            text-decoration: none; /* Remove underline for links */
+            transition: background 0.2s ease, transform 0.1s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        #send-button:hover {
-            background: #2563EB;
+        .button:hover {
+            background: #16A34A; /* Darker green */
+            transform: translateY(-2px); /* Slight lift effect */
+        }
+
+        .button.secondary {
+            background: #3B82F6; /* Blue */
+        }
+
+        .button.secondary:hover {
+            background: #2563EB; /* Darker blue */
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+                border-radius: 0; /* Full width on small screens */
+            }
+            h1 {
+                font-size: 2em;
+            }
+            .button-group {
+                max-width: 100%;
+            }
         }
     </style>
 </head>
 <body>
-    <div id="chat-container">
-        <div id="header">Awesome P2P Chat</div>
-        <div id="connection-info">
-            <div><strong>Your ID:</strong> <span id="my-id"></span></div>
-            <div id="peer-connect">
-                <input id="peer-id" placeholder="Enter friend's ID" />
-                <button id="connect-button" onclick="connectToPeer()">Connect</button>
-            </div>
-        </div>
-        <div id="messages"></div>
-        <div id="input-area">
-            <input id="msg-input" placeholder="Type a message..." />
-            <button id="send-button" onclick="sendMessage()">Send</button>
+    <div class="container">
+        <h1>Welcome to Chit Chat!</h1>
+        <p>Connect directly with your friends using Peer-to-Peer technology. No servers, just direct communication!</p>
+
+        <div class="button-group">
+            <a href="chat.html" class="button">Start a Direct Chat</a>
+            <a href="#" class="button secondary" onclick="alert('Group chat in a purely P2P static setup is complex and typically requires a central server for coordination. This feature is conceptual here.'); return false;">Create/Join Group Chat</a>
         </div>
     </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <script>
-        const messagesDiv = document.getElementById('messages');
-        const myIdSpan = document.getElementById('my-id');
-        const msgInput = document.getElementById('msg-input');
-        const peerIdInput = document.getElementById('peer-id');
-
-        const peer = new Peer({
-            config: {
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' },
-                ]
-            }
-        });
-
-        let conn = null;
-
-        peer.on('open', id => {
-            myIdSpan.textContent = id.substring(0, 5); // Display first 5 characters
-            console.log("My Peer ID:", id);
-        });
-
-        peer.on('connection', c => {
-            if (conn) {
-                c.on('open', () => c.send('Another user connected.')); // Notify the new connection
-                c.on('data', data => console.log('New connection says:', data));
-                return; // Already connected
-            }
-            conn = c;
-            conn.on('data', data => addMessage(data, false));
-            conn.on('open', () => alert("Connected to peer: " + conn.peer.substring(0, 5)));
-            console.log("Incoming connection from:", c.peer);
-        });
-
-        function connectToPeer() {
-            const id = peerIdInput.value.trim();
-            if (!id) return alert("Enter peer ID");
-            conn = peer.connect(id);
-            conn.on('open', () => alert("Connected to: " + id.substring(0, 5) + "!"));
-            conn.on('data', data => addMessage(data, false));
-            conn.on('error', err => console.error("Connection error:", err));
-        }
-
-        function sendMessage() {
-            const msg = msgInput.value.trim();
-            if (!msg || !conn || conn.open === false) return;
-            conn.send(msg);
-            addMessage(msg, true);
-            msgInput.value = '';
-        }
-
-        function addMessage(msg, isMe) {
-            const div = document.createElement('div');
-            div.className = 'message' + (isMe ? ' me' : '');
-            div.textContent = msg;
-            messagesDiv.appendChild(div);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
-
-        // Function to generate a shorter ID (not used by default by PeerJS)
-        function generateShortId(length) {
-            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-            let result = '';
-            for (let i = 0; i < length; i++) {
-                result += characters.charAt(Math.floor(Math.random() * characters.length));
-            }
-            return result;
-        }
-
-        // You could try to set a custom ID on peer creation, but it's not guaranteed to be unique
-        // const peer = new Peer(generateShortId(5), { ... });
-    </script>
 </body>
 </html>
