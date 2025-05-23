@@ -118,12 +118,51 @@
         body.dark .message-bubble.bg-gray-200 .message-timestamp {
             color: rgba(209, 213, 219, 0.7); /* Lighter color for dark background in dark mode */
         }
+
+        /* Responsive sidebar toggle */
+        .sidebar-hidden {
+            transform: translateX(-100%);
+            position: absolute;
+            z-index: 10;
+        }
+        .sidebar-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 9;
+        }
+        .sidebar-toggle-btn {
+            display: none; /* Hidden by default on desktop */
+        }
+        @media (max-width: 768px) {
+            .sidebar-toggle-btn {
+                display: block; /* Show on mobile */
+            }
+            .md\:w-80 {
+                width: 100%;
+            }
+            .md\:flex-row {
+                flex-direction: column;
+            }
+            .h-\[90vh\] {
+                height: 100vh;
+            }
+            .md\:border-r {
+                border-right: none;
+            }
+            .md\:border-l {
+                border-left: none;
+            }
+        }
     </style>
 </head>
 <body class="light">
     <div id="app-container" class="flex flex-col md:flex-row h-[90vh] w-full max-w-6xl bg-white rounded-xl shadow-2xl overflow-hidden">
 
-        <div class="w-full md:w-80 bg-white border-r border-gray-200 flex flex-col p-4">
+        <div id="left-sidebar" class="w-full md:w-80 bg-white border-r border-gray-200 flex flex-col p-4 transition-transform duration-300 ease-in-out">
             <div class="flex items-center justify-between pb-4 border-b border-gray-200 mb-4">
                 <h2 class="text-2xl font-bold text-blue-600">Chit Chat</h2>
                 <div class="flex space-x-2">
@@ -138,13 +177,13 @@
 
             <div class="mb-4">
                 <div class="relative">
-                    <input type="text" id="search-input" placeholder="Search users or groups..." class="w-full p-2 pl-10 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <input type="text" id="search-input" placeholder="Search users or groups..." class="w-full p-2 pl-10 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400" aria-label="Search users or groups">
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 </div>
             </div>
 
-            <div id="my-id-section" class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-800">
-                <strong>Your ID:</strong> <span id="my-peer-id" class="font-semibold cursor-pointer select-all">Loading...</span>
+            <div id="my-id-section" class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-800" role="status">
+                <strong>Your ID:</strong> <span id="my-peer-id" class="font-semibold cursor-pointer select-all" aria-live="polite">Loading...</span>
                 <p class="text-xs text-blue-600 mt-1">Click ID to copy. Share this to connect!</p>
             </div>
 
@@ -168,18 +207,24 @@
 
         <div class="flex-1 flex flex-col bg-gray-50 border-l border-gray-200">
             <div id="chat-header" class="bg-white p-4 border-b border-gray-200 shadow-sm flex items-center justify-between">
-                <h3 class="text-xl font-semibold text-gray-800" id="current-chat-name">Select a chat</h3>
+                <button id="sidebar-toggle-btn" class="p-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors duration-200 mr-2 sidebar-toggle-btn" title="Toggle Sidebar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-menu"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+                </button>
+                <h3 class="text-xl font-semibold text-gray-800 flex-1" id="current-chat-name">Select a chat</h3>
                 </div>
 
             <div id="messages-display" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
                 <div class="text-center text-gray-500 text-sm mt-4" id="initial-chat-message">
                     Start by connecting to a friend or creating a group!
                 </div>
+                <button id="jump-to-latest-btn" class="fixed bottom-24 right-8 bg-blue-500 text-white p-3 rounded-full shadow-lg hover:bg-blue-600 transition-colors duration-200 hidden" aria-label="Jump to latest messages">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-arrow-down"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+                </button>
             </div>
 
             <div id="chat-input-area" class="p-4 bg-white border-t border-gray-200 flex items-center space-x-3">
-                <input type="text" id="message-input" placeholder="Type a message..." class="flex-1 p-3 rounded-lg border border-gray-300 bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
-                <button id="send-message-btn" class="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md">
+                <input type="text" id="message-input" placeholder="Type a message..." class="flex-1 p-3 rounded-lg border border-gray-300 bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400" aria-label="Type your message">
+                <button id="send-message-btn" class="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md" aria-label="Send message">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-send"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></svg>
                 </button>
             </div>
@@ -200,13 +245,13 @@
             <h2 class="text-2xl font-bold mb-6 text-gray-800">Add a Friend</h2>
             <div class="mb-4">
                 <label for="friend-id-input" class="block text-gray-700 text-sm font-semibold mb-2">Friend's Peer ID</label>
-                <input type="text" id="friend-id-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-blue-400" placeholder="Enter friend's full Peer ID">
+                <input type="text" id="friend-id-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-blue-400" placeholder="Enter friend's full Peer ID" aria-label="Friend's Peer ID">
             </div>
             <div class="mb-4">
                 <label for="friend-name-input" class="block text-gray-700 text-sm font-semibold mb-2">Friend's Display Name (Optional)</label>
-                <input type="text" id="friend-name-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-blue-400" placeholder="e.g., John Doe">
+                <input type="text" id="friend-name-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-blue-400" placeholder="e.g., John Doe" aria-label="Friend's Display Name">
             </div>
-            <p id="add-friend-status" class="text-sm text-gray-600 mb-4"></p>
+            <p id="add-friend-status" class="text-sm text-gray-600 mb-4" role="status"></p>
             <div class="flex justify-end space-x-4">
                 <button id="cancel-add-friend-btn" class="px-5 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200">
                     Cancel
@@ -223,18 +268,18 @@
             <h2 class="text-2xl font-bold mb-6 text-gray-800">Create New Group</h2>
             <div class="mb-4">
                 <label for="group-name-input" class="block text-gray-700 text-sm font-semibold mb-2">Group Name</label>
-                <input type="text" id="group-name-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-blue-400" placeholder="Enter group name">
+                <input type="text" id="group-name-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-blue-400" placeholder="Enter group name" aria-label="Group Name">
             </div>
             <div class="mb-6">
                 <label class="block text-gray-700 text-sm font-semibold mb-2">Select Members (by ID)</label>
                 <div class="flex items-center space-x-2 mb-2">
-                    <input type="text" id="add-member-id-input" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-blue-400" placeholder="Enter member's Peer ID">
+                    <input type="text" id="add-member-id-input" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-blue-400" placeholder="Enter member's Peer ID" aria-label="Enter member's Peer ID">
                     <button id="add-member-btn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200">Add</button>
                 </div>
                 <ul id="selected-members-list" class="h-40 overflow-y-auto border border-gray-300 rounded-lg p-2 bg-gray-100">
                     </ul>
             </div>
-            <p id="create-group-status" class="text-sm text-gray-600 mb-4"></p>
+            <p id="create-group-status" class="text-sm text-gray-600 mb-4" role="status"></p>
             <div class="flex justify-end space-x-4">
                 <button id="cancel-create-group-btn" class="px-5 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200">
                     Cancel
@@ -245,6 +290,18 @@
             </div>
         </div>
     </div>
+
+    <div id="typing-indicator" class="absolute bottom-20 left-1/2 -translate-x-1/2 bg-gray-700 text-white text-sm px-3 py-1 rounded-full shadow-md hidden">
+        Someone is typing...
+    </div>
+
+    <div id="debug-panel" class="fixed bottom-4 left-4 bg-gray-800 text-white p-4 rounded-lg shadow-xl w-80 max-h-64 overflow-y-auto custom-scrollbar z-40">
+        <h4 class="font-bold mb-2 cursor-pointer" id="debug-panel-toggle">Debug Log (Click to Toggle)</h4>
+        <div id="debug-panel-content" class="text-xs space-y-1 hidden">
+            </div>
+    </div>
+
+    <audio id="notification-sound" src="https://www.soundjay.com/buttons/button-2.mp3" preload="auto"></audio>
 
 
     <script>
@@ -263,12 +320,17 @@
         const createGroupBtn = document.getElementById('create-group-btn');
         const themeToggleBtn = document.getElementById('theme-toggle-btn');
         const searchInput = document.getElementById('search-input');
-        const addFriendSidebarBtn = document.getElementById('add-friend-sidebar-btn'); // New button reference
+        const addFriendSidebarBtn = document.getElementById('add-friend-sidebar-btn');
+        const leftSidebar = document.getElementById('left-sidebar');
+        const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+        const jumpToLatestBtn = document.getElementById('jump-to-latest-btn');
+        const typingIndicator = document.getElementById('typing-indicator');
+        const notificationSound = document.getElementById('notification-sound');
 
         // Modals
         const addFriendModal = document.getElementById('add-friend-modal');
         const friendIdInput = document.getElementById('friend-id-input');
-        const friendNameInput = document.getElementById('friend-name-input'); // New input for friend name
+        const friendNameInput = document.getElementById('friend-name-input');
         const addFriendStatus = document.getElementById('add-friend-status');
         const cancelAddFriendBtn = document.getElementById('cancel-add-friend-btn');
         const confirmAddFriendBtn = document.getElementById('confirm-add-friend-btn');
@@ -282,27 +344,135 @@
         const cancelCreateGroupBtn = document.getElementById('cancel-create-group-btn');
         const confirmCreateGroupBtn = document.getElementById('confirm-create-group-btn');
 
+        // Debug Panel
+        const debugPanel = document.getElementById('debug-panel');
+        const debugPanelToggle = document.getElementById('debug-panel-toggle');
+        const debugPanelContent = document.getElementById('debug-panel-content');
+
         // --- PeerJS Setup ---
         let peer = null;
         let myId = null;
-        let activeConnection = null; // Stores the current DataConnection object
-        let activeChat = { type: null, id: null, name: null }; // { type: 'user' | 'group', id: 'peerId' | 'groupId', name: 'Chat Name' }
+        let activeConnection = null;
+        let activeChat = { type: null, id: null, name: null };
 
-        // Store connections for direct messages (key: peerId, value: DataConnection)
-        const directConnections = new Map();
-        // Store group members (key: groupId, value: Set<peerId>)
-        const groupMembers = new Map();
-        // Store group names (key: groupId, value: groupName)
-        const groupNames = new Map();
+        const directConnections = new Map(); // key: peerId, value: DataConnection
+        const groupMembers = new Map(); // key: groupId, value: Set<peerId>
+        const groupNames = new Map(); // key: groupId, value: groupName
 
         // --- Local Storage Keys ---
         const LS_FRIENDS_KEY = 'chitchat_friends';
         const LS_GROUPS_KEY = 'chitchat_groups';
         const LS_THEME_KEY = 'chitchat_theme';
+        const LS_CHAT_HISTORY_DB = 'chitchat_chat_history';
 
         // --- Data Structures from Local Storage ---
-        let friends = JSON.parse(localStorage.getItem(LS_FRIENDS_KEY) || '[]'); // Array of { id: peerId, name: 'Friend Name' (optional) }
-        let groups = JSON.parse(localStorage.getItem(LS_GROUPS_KEY) || '[]'); // Array of { id: groupId, name: groupName, members: [peerId1, peerId2] }
+        let friends = JSON.parse(localStorage.getItem(LS_FRIENDS_KEY) || '[]');
+        let groups = JSON.parse(localStorage.getItem(LS_GROUPS_KEY) || '[]');
+
+        // --- IndexedDB Setup for Chat History ---
+        let db;
+        const DB_VERSION = 1;
+        const STORE_NAME = 'messages';
+
+        function openIndexedDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(LS_CHAT_HISTORY_DB, DB_VERSION);
+
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'messageId', autoIncrement: true });
+                        objectStore.createIndex('chatId', 'chatId', { unique: false });
+                        objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+                    }
+                };
+
+                request.onsuccess = (event) => {
+                    db = event.target.result;
+                    console.log("IndexedDB opened successfully.");
+                    logDebug("IndexedDB opened successfully.");
+                    resolve(db);
+                };
+
+                request.onerror = (event) => {
+                    console.error("IndexedDB error:", event.target.errorCode);
+                    logDebug(`IndexedDB error: ${event.target.errorCode}`);
+                    reject(event.target.errorCode);
+                };
+            });
+        }
+
+        async function saveMessageToDB(chatId, messageData) {
+            if (!db) {
+                console.warn("IndexedDB not initialized, cannot save message.");
+                return;
+            }
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const messageToSave = {
+                chatId: chatId,
+                senderId: messageData.senderId,
+                text: messageData.text,
+                timestamp: messageData.timestamp || Date.now(),
+                isMe: messageData.isMe,
+                type: messageData.type || 'text', // 'text', 'image', 'video', 'file'
+                url: messageData.url || null, // For media/files
+                fileName: messageData.fileName || null, // For files
+                read: messageData.read || false, // For read receipts
+                delivered: messageData.delivered || false, // For delivered receipts
+                reactions: messageData.reactions || [], // For reactions
+                edited: messageData.edited || false, // For edited messages
+                deleted: messageData.deleted || false // For deleted messages
+            };
+            store.add(messageToSave);
+            return new Promise((resolve, reject) => {
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = (event) => reject(event.target.error);
+            });
+        }
+
+        async function loadMessagesFromDB(chatId) {
+            if (!db) {
+                console.warn("IndexedDB not initialized, cannot load messages.");
+                return [];
+            }
+            const transaction = db.transaction([STORE_NAME], 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            const index = store.index('chatId');
+            const request = index.getAll(chatId);
+
+            return new Promise((resolve, reject) => {
+                request.onsuccess = (event) => {
+                    const messages = event.target.result;
+                    // Sort messages by timestamp if not already sorted by index
+                    messages.sort((a, b) => a.timestamp - b.timestamp);
+                    resolve(messages);
+                };
+                request.onerror = (event) => reject(event.target.error);
+            });
+        }
+
+        async function updateMessageInDB(chatId, messageId, updates) {
+            if (!db) {
+                console.warn("IndexedDB not initialized, cannot update message.");
+                return;
+            }
+            const transaction = db.transaction([STORE_NAME], 'readwrite');
+            const store = transaction.objectStore(STORE_NAME);
+            const getRequest = store.get(messageId);
+
+            getRequest.onsuccess = () => {
+                const message = getRequest.result;
+                if (message && message.chatId === chatId) {
+                    Object.assign(message, updates);
+                    store.put(message);
+                }
+            };
+            return new Promise((resolve, reject) => {
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = (event) => reject(event.target.error);
+            });
+        }
 
         // --- Utility Functions ---
         function saveFriends() {
@@ -314,16 +484,59 @@
         }
 
         function isImageUrl(url) {
-            return (url.match(/\.(jpeg|jpg|gif|png|webp)$/) != null);
+            return (url.match(/\.(jpeg|jpg|gif|png|webp)$/i) != null);
         }
 
         function isVideoUrl(url) {
-            return (url.match(/\.(mp4|webm|ogg)$/) != null);
+            return (url.match(/\.(mp4|webm|ogg)$/i) != null);
         }
 
-        function addMessageToDisplay(message, senderId, isMe = false, chatType = 'user') {
+        function isFileUrl(url) {
+            // Very basic check, could be improved
+            return (url.match(/\.(pdf|txt|doc|docx|xls|xlsx|ppt|pptx)$/i) != null);
+        }
+
+        function getInitials(name) {
+            if (!name) return 'U';
+            const parts = name.split(' ');
+            if (parts.length > 1) {
+                return (parts[0][0] + parts[1][0]).toUpperCase();
+            }
+            return name[0].toUpperCase();
+        }
+
+        function getRandomColor() {
+            const colors = ['#EF4444', '#F97316', '#EAB308', '#22C55E', '#10B981', '#06B6D4', '#3B82F6', '#6366F1', '#8B5CF6', '#D946EF'];
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        let lastMessageDate = null;
+        function addMessageToDisplay(messageData, senderId, isMe = false, chatType = 'user') {
+            // Handle date separators
+            const messageDate = new Date(messageData.timestamp);
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+
+            let dateSeparatorText = null;
+            if (lastMessageDate === null || messageDate.toDateString() !== lastMessageDate.toDateString()) {
+                if (messageDate.toDateString() === today.toDateString()) {
+                    dateSeparatorText = 'Today';
+                } else if (messageDate.toDateString() === yesterday.toDateString()) {
+                    dateSeparatorText = 'Yesterday';
+                } else {
+                    dateSeparatorText = messageDate.toLocaleDateString();
+                }
+                const separatorDiv = document.createElement('div');
+                separatorDiv.className = 'text-center text-gray-500 text-xs my-3 relative';
+                separatorDiv.innerHTML = `<span class="bg-gray-50 dark:bg-gray-900 px-2">${dateSeparatorText}</span>`;
+                messagesDisplay.appendChild(separatorDiv);
+            }
+            lastMessageDate = messageDate;
+
             const messageElement = document.createElement('div');
             messageElement.className = `flex mb-2 ${isMe ? 'justify-end' : 'justify-start'}`;
+            messageElement.setAttribute('data-message-id', messageData.messageId); // For updates
 
             const bubble = document.createElement('div');
             bubble.className = `message-bubble max-w-[70%] p-3 rounded-lg shadow-sm relative ${
@@ -331,77 +544,107 @@
             }`;
 
             if (chatType === 'group' && !isMe) {
-                const senderName = getFriendName(senderId) || senderId.substring(0, 5); // Display short ID if no name
+                const senderName = getFriendName(senderId) || senderId.substring(0, 5);
                 const senderSpan = document.createElement('p');
-                senderSpan.className = 'text-xs font-semibold text-gray-600 mb-1';
-                bubble.classList.add('dark:text-gray-300'); // Dark mode adjustment
+                senderSpan.className = 'text-xs font-semibold text-gray-600 mb-1 dark:text-gray-300';
                 senderSpan.textContent = senderName;
                 bubble.appendChild(senderSpan);
             }
 
-            // Handle URLs for images/videos/links
-            const urlRegex = /(https?:\/\/[^\s]+)/g;
-            if (urlRegex.test(message)) {
-                const parts = message.split(urlRegex);
-                parts.forEach(part => {
-                    if (urlRegex.test(part)) {
-                        if (isImageUrl(part)) {
-                            const img = document.createElement('img');
-                            img.src = part;
-                            img.alt = 'Image';
-                            img.className = 'max-w-full h-auto rounded-md my-1';
-                            img.onerror = () => {
-                                const link = document.createElement('a');
-                                link.href = part;
-                                link.textContent = part;
-                                link.target = '_blank';
-                                link.className = 'text-blue-300 underline';
-                                bubble.appendChild(link);
-                            };
-                            bubble.appendChild(img);
-                        } else if (isVideoUrl(part)) {
-                            const video = document.createElement('video');
-                            video.src = part;
-                            video.controls = true;
-                            video.className = 'max-w-full h-auto rounded-md my-1';
-                            video.onerror = () => {
-                                const link = document.createElement('a');
-                                link.href = part;
-                                link.textContent = part;
-                                link.target = '_blank';
-                                link.className = 'text-blue-300 underline';
-                                bubble.appendChild(link);
-                            };
-                            bubble.appendChild(video);
-                        } else {
-                            const link = document.createElement('a');
-                            link.href = part;
-                            link.textContent = part;
-                            link.target = '_blank';
-                            link.className = 'text-blue-300 underline';
-                            bubble.appendChild(link);
-                        }
-                    } else if (part) {
-                        const textNode = document.createTextNode(part);
-                        bubble.appendChild(textNode);
-                    }
-                });
-            } else {
+            // Message content
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+
+            if (messageData.deleted) {
+                const deletedSpan = document.createElement('span');
+                deletedSpan.className = 'italic text-gray-500 dark:text-gray-400';
+                deletedSpan.textContent = 'This message was deleted.';
+                contentDiv.appendChild(deletedSpan);
+            } else if (messageData.type === 'text') {
                 const textSpan = document.createElement('p');
                 textSpan.className = 'text-sm';
-                textSpan.textContent = message;
-                bubble.appendChild(textSpan);
+                textSpan.textContent = messageData.text;
+                contentDiv.appendChild(textSpan);
+            } else if (messageData.type === 'image' && messageData.url) {
+                const img = document.createElement('img');
+                img.src = messageData.url;
+                img.alt = 'Image';
+                img.className = 'max-w-full h-auto rounded-md my-1';
+                img.onerror = () => {
+                    img.remove(); // Remove broken image
+                    const link = document.createElement('a');
+                    link.href = messageData.url;
+                    link.textContent = 'Image failed to load. Click to view.';
+                    link.target = '_blank';
+                    link.className = 'text-blue-300 underline';
+                    contentDiv.appendChild(link);
+                };
+                contentDiv.appendChild(img);
+            } else if (messageData.type === 'video' && messageData.url) {
+                const video = document.createElement('video');
+                video.src = messageData.url;
+                video.controls = true;
+                video.className = 'max-w-full h-auto rounded-md my-1';
+                video.onerror = () => {
+                    video.remove();
+                    const link = document.createElement('a');
+                    link.href = messageData.url;
+                    link.textContent = 'Video failed to load. Click to view.';
+                    link.target = '_blank';
+                    link.className = 'text-blue-300 underline';
+                    contentDiv.appendChild(link);
+                };
+                bubble.appendChild(video);
+            } else if (messageData.type === 'file' && messageData.url && messageData.fileName) {
+                const fileLink = document.createElement('a');
+                fileLink.href = messageData.url;
+                fileLink.textContent = `Download: ${messageData.fileName}`;
+                fileLink.target = '_blank';
+                fileLink.className = 'text-blue-300 underline flex items-center';
+                fileLink.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-file-text mr-1"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg> ${messageData.fileName}`;
+                contentDiv.appendChild(fileLink);
             }
 
+            bubble.appendChild(contentDiv);
+
+            // Read Receipts / Delivered status
+            const statusIndicator = document.createElement('span');
+            statusIndicator.className = 'text-xs ml-1 absolute bottom-0 right-0';
+            if (isMe) {
+                if (messageData.read) {
+                    statusIndicator.innerHTML = '✓✓'; // Read
+                    statusIndicator.title = 'Read';
+                    statusIndicator.classList.add('text-green-300');
+                } else if (messageData.delivered) {
+                    statusIndicator.innerHTML = '✓✓'; // Delivered
+                    statusIndicator.title = 'Delivered';
+                    statusIndicator.classList.add('text-gray-300');
+                } else {
+                    statusIndicator.innerHTML = '✓'; // Sent
+                    statusIndicator.title = 'Sent';
+                    statusIndicator.classList.add('text-gray-300');
+                }
+            }
+            bubble.appendChild(statusIndicator);
+
+            // Reactions (placeholder)
+            if (messageData.reactions && messageData.reactions.length > 0) {
+                const reactionsDiv = document.createElement('div');
+                reactionsDiv.className = 'absolute -bottom-3 right-0 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full text-xs shadow-md';
+                reactionsDiv.textContent = messageData.reactions.join(' ');
+                bubble.appendChild(reactionsDiv);
+            }
+
+
             const timestampSpan = document.createElement('span');
-            timestampSpan.className = `message-timestamp`; // Apply new class for styling
-            timestampSpan.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            timestampSpan.className = `message-timestamp`;
+            timestampSpan.textContent = new Date(messageData.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             bubble.appendChild(timestampSpan);
 
             messageElement.appendChild(bubble);
             messagesDisplay.appendChild(messageElement);
-            messagesDisplay.scrollTop = messagesDisplay.scrollHeight; // Scroll to bottom
-            initialChatMessage.classList.add('hidden'); // Hide initial message
+            messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
+            initialChatMessage.classList.add('hidden');
         }
 
         function getFriendName(peerId) {
@@ -418,9 +661,15 @@
                 friends.forEach(friend => {
                     const friendElement = document.createElement('div');
                     friendElement.className = `flex items-center p-3 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors duration-200 ${activeChat.type === 'user' && activeChat.id === friend.id ? 'bg-blue-100' : ''}`;
+                    friendElement.setAttribute('aria-label', `Chat with ${friend.name || friend.id.substring(0, 5)}`);
+
+                    const avatarBgColor = friend.avatarColor || getRandomColor();
+                    friend.avatarColor = avatarBgColor; // Store color for consistency
+                    saveFriends(); // Save updated friends with avatarColor
+
                     friendElement.innerHTML = `
-                        <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white font-bold mr-3">
-                            ${(friend.name || friend.id)[0].toUpperCase()}
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold mr-3" style="background-color: ${avatarBgColor};">
+                            ${getInitials(friend.name || friend.id)}
                         </div>
                         <div>
                             <p class="font-semibold">${friend.name || friend.id.substring(0, 5)}</p>
@@ -442,8 +691,14 @@
                 groups.forEach(group => {
                     const groupElement = document.createElement('div');
                     groupElement.className = `flex items-center p-3 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors duration-200 ${activeChat.type === 'group' && activeChat.id === group.id ? 'bg-blue-100' : ''}`;
+                    groupElement.setAttribute('aria-label', `Chat in group ${group.name}`);
+
+                    const avatarBgColor = group.avatarColor || getRandomColor();
+                    group.avatarColor = avatarBgColor;
+                    saveGroups();
+
                     groupElement.innerHTML = `
-                        <div class="w-10 h-10 rounded-full bg-purple-300 flex items-center justify-center text-white font-bold mr-3">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold mr-3" style="background-color: ${avatarBgColor};">
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87L16 14"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                         </div>
                         <div>
@@ -457,23 +712,74 @@
             }
         }
 
-        function selectChat(chatInfo) {
+        async function selectChat(chatInfo) {
             activeChat = chatInfo;
             currentChatName.textContent = chatInfo.name;
-            messagesDisplay.innerHTML = ''; // Clear previous messages
-            initialChatMessage.classList.add('hidden'); // Hide initial message
+            messagesDisplay.innerHTML = '';
+            initialChatMessage.classList.add('hidden');
+            lastMessageDate = null; // Reset for new chat
 
-            addMessageToDisplay(`You are now chatting in ${chatInfo.name}.`, myId, false, 'system');
-            updateFriendListUI(); // Update UI to highlight selected chat
+            addMessageToDisplay({ text: `You are now chatting in ${chatInfo.name}.`, timestamp: Date.now() }, myId, false, 'system');
+            updateFriendListUI();
             updateGroupListUI();
+
+            // Load history from IndexedDB
+            const history = await loadMessagesFromDB(chatInfo.id);
+            history.forEach(msg => {
+                addMessageToDisplay(msg, msg.senderId, msg.senderId === myId, msg.chatType);
+            });
+            messagesDisplay.scrollTop = messagesDisplay.scrollHeight; // Scroll to bottom after loading history
         }
 
         function showModal(modalElement) {
             modalElement.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden'); // Prevent scrolling body
         }
 
         function hideModal(modalElement) {
             modalElement.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        let typingTimeout;
+        function sendTypingIndicator(isTyping) {
+            if (!activeConnection || !activeConnection.open) return;
+            const typingMessage = { type: 'typing_indicator', isTyping: isTyping, senderId: myId };
+            activeConnection.send(JSON.stringify(typingMessage));
+        }
+
+        function showTypingIndicator(senderId) {
+            if (typingIndicator.dataset.typingPeer === senderId) return; // Already showing for this peer
+            typingIndicator.textContent = `${getFriendName(senderId) || senderId.substring(0, 5)} is typing...`;
+            typingIndicator.classList.remove('hidden');
+            typingIndicator.dataset.typingPeer = senderId; // Store who is typing
+
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                typingIndicator.classList.add('hidden');
+                typingIndicator.dataset.typingPeer = '';
+            }, 3000); // Hide after 3 seconds of no new typing events
+        }
+
+        function hideTypingIndicator(senderId) {
+            if (typingIndicator.dataset.typingPeer === senderId) {
+                clearTimeout(typingTimeout);
+                typingIndicator.classList.add('hidden');
+                typingIndicator.dataset.typingPeer = '';
+            }
+        }
+
+        function playNotificationSound() {
+            if (notificationSound) {
+                notificationSound.play().catch(e => console.warn("Notification sound play failed:", e));
+            }
+        }
+
+        function logDebug(message) {
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            debugPanelContent.appendChild(logEntry);
+            debugPanelContent.scrollTop = debugPanelContent.scrollHeight;
         }
 
         // --- PeerJS Event Handlers ---
@@ -493,24 +799,23 @@
             peer.on('open', id => {
                 myId = id;
                 myPeerIdSpan.textContent = myId;
-                console.log("My Peer ID:", myId);
+                logDebug(`My Peer ID: ${myId}`);
             });
 
             peer.on('connection', (conn) => {
-                console.log(`Incoming connection from ${conn.peer}`);
+                logDebug(`Incoming connection from ${conn.peer}`);
                 addFriendStatus.textContent = `Incoming connection from ${conn.peer.substring(0, 5)}.`;
-                addMessageToDisplay(`Incoming connection from ${conn.peer.substring(0, 5)}.`, conn.peer, false, 'system');
+                addMessageToDisplay({ text: `Incoming connection from ${conn.peer.substring(0, 5)}.`, timestamp: Date.now() }, conn.peer, false, 'system');
 
                 if (!directConnections.has(conn.peer)) {
                     setupConnection(conn);
-                    // Automatically add to friends list upon successful connection
                     if (!friends.some(f => f.id === conn.peer)) {
-                        friends.push({ id: conn.peer, name: `Friend ${conn.peer.substring(0, 5)}` });
+                        friends.push({ id: conn.peer, name: `Friend ${conn.peer.substring(0, 5)}`, avatarColor: getRandomColor() });
                         saveFriends();
                         updateFriendListUI();
                     }
                 } else {
-                    console.log(`Already connected to ${conn.peer}.`);
+                    logDebug(`Already connected to ${conn.peer}.`);
                     conn.on('open', () => conn.send('Already connected to you.'));
                     conn.close();
                 }
@@ -518,6 +823,7 @@
 
             peer.on('error', (err) => {
                 console.error("PeerJS Error:", err);
+                logDebug(`PeerJS Error: ${err.message}`);
                 addFriendStatus.textContent = `Error: ${err.message}`;
                 createGroupStatus.textContent = `Error: ${err.message}`;
             });
@@ -527,47 +833,105 @@
             directConnections.set(conn.peer, conn);
 
             conn.on('open', () => {
-                console.log(`Connection opened with ${conn.peer}`);
+                logDebug(`Connection opened with ${conn.peer}`);
                 addFriendStatus.textContent = `Connected to ${conn.peer.substring(0, 5)}!`;
-                addMessageToDisplay(`Connected to ${conn.peer.substring(0, 5)}.`, conn.peer, false, 'system');
+                addMessageToDisplay({ text: `Connected to ${conn.peer.substring(0, 5)}.`, timestamp: Date.now() }, conn.peer, false, 'system');
                 hideModal(addFriendModal);
                 selectChat({ type: 'user', id: conn.peer, name: getFriendName(conn.peer) || conn.peer.substring(0, 5) });
             });
 
             conn.on('data', (data) => {
-                console.log(`Received data from ${conn.peer}:`, data);
+                logDebug(`Received data from ${conn.peer}: ${data}`);
                 try {
                     const parsedData = JSON.parse(data);
-                    if (parsedData.type === 'group_message' && parsedData.groupId && parsedData.senderId) {
+                    if (parsedData.type === 'typing_indicator') {
+                        if (parsedData.isTyping) {
+                            showTypingIndicator(conn.peer);
+                        } else {
+                            hideTypingIndicator(conn.peer);
+                        }
+                    } else if (parsedData.type === 'read_receipt' && parsedData.messageId) {
+                        // Update message status in UI and DB
+                        const messageElement = messagesDisplay.querySelector(`[data-message-id="${parsedData.messageId}"]`);
+                        if (messageElement) {
+                            const statusIndicator = messageElement.querySelector('.absolute.bottom-0.right-0');
+                            if (statusIndicator) {
+                                statusIndicator.innerHTML = '✓✓'; // Read
+                                statusIndicator.title = 'Read';
+                                statusIndicator.classList.remove('text-gray-300');
+                                statusIndicator.classList.add('text-green-300');
+                            }
+                        }
+                        updateMessageInDB(activeChat.id, parsedData.messageId, { read: true });
+                    } else if (parsedData.type === 'message_reaction' && parsedData.messageId && parsedData.emoji) {
+                        // Add reaction to message
+                        const messageElement = messagesDisplay.querySelector(`[data-message-id="${parsedData.messageId}"]`);
+                        if (messageElement) {
+                            let reactionsDiv = messageElement.querySelector('.reactions-div');
+                            if (!reactionsDiv) {
+                                reactionsDiv = document.createElement('div');
+                                reactionsDiv.className = 'reactions-div absolute -bottom-3 right-0 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full text-xs shadow-md';
+                                messageElement.querySelector('.message-bubble').appendChild(reactionsDiv);
+                            }
+                            reactionsDiv.textContent = (reactionsDiv.textContent || '') + parsedData.emoji;
+                        }
+                        // Update in DB (more complex for multiple reactions, simple append for now)
+                        updateMessageInDB(activeChat.id, parsedData.messageId, { reactions: [...(messageElement ? (messageElement.dataset.reactions ? JSON.parse(messageElement.dataset.reactions) : []) : []), parsedData.emoji] });
+                    } else if (parsedData.type === 'message_edit' && parsedData.messageId && parsedData.newText) {
+                        const messageElement = messagesDisplay.querySelector(`[data-message-id="${parsedData.messageId}"]`);
+                        if (messageElement) {
+                            messageElement.querySelector('.message-content p').textContent = parsedData.newText + ' (edited)';
+                        }
+                        updateMessageInDB(activeChat.id, parsedData.messageId, { text: parsedData.newText, edited: true });
+                    } else if (parsedData.type === 'message_delete' && parsedData.messageId) {
+                        const messageElement = messagesDisplay.querySelector(`[data-message-id="${parsedData.messageId}"]`);
+                        if (messageElement) {
+                            messageElement.querySelector('.message-content').innerHTML = '<span class="italic text-gray-500 dark:text-gray-400">This message was deleted.</span>';
+                        }
+                        updateMessageInDB(activeChat.id, parsedData.messageId, { deleted: true });
+                    } else if (parsedData.type === 'group_message' && parsedData.groupId && parsedData.senderId) {
                         const targetGroup = groups.find(g => g.id === parsedData.groupId);
                         if (targetGroup && targetGroup.members.includes(myId)) {
                             if (activeChat.type === 'group' && activeChat.id === parsedData.groupId) {
-                                addMessageToDisplay(parsedData.text, parsedData.senderId, false, 'group');
+                                addMessageToDisplay({ text: parsedData.text, timestamp: Date.now(), messageId: parsedData.messageId }, parsedData.senderId, false, 'group');
+                                playNotificationSound();
                             } else {
                                 console.log(`New message in group ${targetGroup.name} from ${parsedData.senderId.substring(0, 5)}: ${parsedData.text}`);
+                                playNotificationSound();
                             }
                         }
-                    } else {
+                    } else if (parsedData.type === 'file_transfer' && parsedData.url && parsedData.fileName) {
+                        addMessageToDisplay({ text: parsedData.text, timestamp: Date.now(), type: 'file', url: parsedData.url, fileName: parsedData.fileName }, conn.peer, false, 'user');
+                        playNotificationSound();
+                    }
+                    else {
                         // Direct message (could be string or non-group JSON)
                         if (activeChat.type === 'user' && activeChat.id === conn.peer) {
-                            addMessageToDisplay(data, conn.peer, false, 'user');
+                            addMessageToDisplay({ text: data, timestamp: Date.now() }, conn.peer, false, 'user');
+                            playNotificationSound();
+                            // Send read receipt if this is the active chat
+                            conn.send(JSON.stringify({ type: 'read_receipt', messageId: 'latest' })); // Simplified for now
                         } else {
-                             console.log(`Direct message from non-active user ${conn.peer}: ${data}`);
+                             logDebug(`Direct message from non-active user ${conn.peer}: ${data}`);
+                             playNotificationSound();
                         }
                     }
                 } catch (e) {
                     // Not JSON, treat as a regular direct message
                     if (activeChat.type === 'user' && activeChat.id === conn.peer) {
-                        addMessageToDisplay(data, conn.peer, false, 'user');
+                        addMessageToDisplay({ text: data, timestamp: Date.now() }, conn.peer, false, 'user');
+                        playNotificationSound();
+                        conn.send(JSON.stringify({ type: 'read_receipt', messageId: 'latest' }));
                     } else {
-                        console.log(`Direct message from non-active user ${conn.peer}: ${data}`);
+                        logDebug(`Direct message from non-active user ${conn.peer}: ${data}`);
+                        playNotificationSound();
                     }
                 }
             });
 
             conn.on('close', () => {
-                console.log(`Connection closed with ${conn.peer}`);
-                addMessageToDisplay(`Disconnected from ${conn.peer.substring(0, 5)}.`, conn.peer, false, 'system');
+                logDebug(`Connection closed with ${conn.peer}`);
+                addMessageToDisplay({ text: `Disconnected from ${conn.peer.substring(0, 5)}.`, timestamp: Date.now() }, conn.peer, false, 'system');
                 directConnections.delete(conn.peer);
                 if (activeChat.id === conn.peer) {
                     activeChat = { type: null, id: null, name: null };
@@ -580,15 +944,21 @@
 
             conn.on('error', (err) => {
                 console.error(`Connection error with ${conn.peer}:`, err);
+                logDebug(`Connection error with ${conn.peer.substring(0, 5)}: ${err.message}`);
                 addFriendStatus.textContent = `Connection error with ${conn.peer.substring(0, 5)}.`;
-                addMessageToDisplay(`Connection error with ${conn.peer.substring(0, 5)}.`, conn.peer, false, 'system');
+                addMessageToDisplay({ text: `Connection error with ${conn.peer.substring(0, 5)}.`, timestamp: Date.now() }, conn.peer, false, 'system');
                 directConnections.delete(conn.peer);
                 updateFriendListUI();
             });
         }
 
         // --- Event Listeners ---
-        window.onload = initializePeer;
+        window.onload = async () => {
+            await openIndexedDB(); // Initialize IndexedDB first
+            initializePeer();
+            updateFriendListUI();
+            updateGroupListUI();
+        };
 
         myPeerIdSpan.addEventListener('click', () => {
             if (myId) {
@@ -602,11 +972,11 @@
             }
         });
 
-        // Add Friend Modal Logic (Now with optional name)
+        // Add Friend Modal Logic
         addFriendSidebarBtn.addEventListener('click', () => {
             showModal(addFriendModal);
             friendIdInput.value = '';
-            friendNameInput.value = ''; // Clear name input
+            friendNameInput.value = '';
             addFriendStatus.textContent = '';
         });
 
@@ -637,7 +1007,7 @@
             setupConnection(conn);
 
             if (!friends.some(f => f.id === friendId)) {
-                friends.push({ id: friendId, name: friendName || `Friend ${friendId.substring(0, 5)}` });
+                friends.push({ id: friendId, name: friendName || `Friend ${friendId.substring(0, 5)}`, avatarColor: getRandomColor() });
                 saveFriends();
                 updateFriendListUI();
             }
@@ -715,7 +1085,7 @@
             }
 
             const newGroupId = `group_${Date.now()}`;
-            const newGroup = { id: newGroupId, name: groupName, members: members };
+            const newGroup = { id: newGroupId, name: groupName, members: members, avatarColor: getRandomColor() };
             groups.push(newGroup);
             saveGroups();
             updateGroupListUI();
@@ -726,35 +1096,55 @@
 
 
         // Send Message Logic
-        sendMessageBtn.addEventListener('click', () => {
+        sendMessageBtn.addEventListener('click', async () => {
             const message = messageInput.value.trim();
             if (!message || !activeChat.id) return;
 
-            addMessageToDisplay(message, myId, true, activeChat.type);
+            const messageData = {
+                senderId: myId,
+                text: message,
+                timestamp: Date.now(),
+                isMe: true,
+                type: 'text',
+                delivered: false,
+                read: false,
+                messageId: `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}` // Unique ID for receipts
+            };
+
+            addMessageToDisplay(messageData, myId, true, activeChat.type);
+            await saveMessageToDB(activeChat.id, messageData);
             messageInput.value = '';
 
             if (activeChat.type === 'user') {
                 const conn = directConnections.get(activeChat.id);
                 if (conn && conn.open) {
-                    conn.send(message);
+                    conn.send(JSON.stringify(messageData)); // Send full message data
+                    // Simulate delivered status after sending
+                    updateMessageInDB(activeChat.id, messageData.messageId, { delivered: true });
+                    // Update UI for delivered status (simple for now)
+                    const msgEl = messagesDisplay.querySelector(`[data-message-id="${messageData.messageId}"]`);
+                    if (msgEl) {
+                        const statusIndicator = msgEl.querySelector('.absolute.bottom-0.right-0');
+                        if (statusIndicator) {
+                            statusIndicator.innerHTML = '✓✓';
+                            statusIndicator.title = 'Delivered';
+                            statusIndicator.classList.remove('text-gray-300');
+                            statusIndicator.classList.add('text-gray-300'); // Still gray for delivered
+                        }
+                    }
                 } else {
-                    addMessageToDisplay(`Error: Not connected to ${activeChat.name}.`, myId, false, 'system');
+                    addMessageToDisplay({ text: `Error: Not connected to ${activeChat.name}.`, timestamp: Date.now() }, myId, false, 'system');
                     console.error('Connection not open for direct chat:', activeChat.id);
                 }
             } else if (activeChat.type === 'group') {
                 const group = groups.find(g => g.id === activeChat.id);
                 if (group) {
-                    const groupMessage = {
-                        senderId: myId,
-                        text: message,
-                        type: 'group_message',
-                        groupId: group.id
-                    };
+                    const groupMessageData = { ...messageData, type: 'group_message', groupId: group.id };
                     group.members.forEach(memberId => {
                         if (memberId !== myId) {
                             const conn = directConnections.get(memberId);
                             if (conn && conn.open) {
-                                conn.send(JSON.stringify(groupMessage));
+                                conn.send(JSON.stringify(groupMessageData));
                             } else {
                                 console.warn(`Could not send message to ${memberId.substring(0, 5)} in group ${group.name}: Not connected.`);
                             }
@@ -764,9 +1154,23 @@
             }
         });
 
+        // Typing indicator logic
+        let typingTimer;
+        messageInput.addEventListener('input', () => {
+            if (activeConnection && activeConnection.open) {
+                sendTypingIndicator(true); // Send typing start
+                clearTimeout(typingTimer);
+                typingTimer = setTimeout(() => {
+                    sendTypingIndicator(false); // Send typing stop after a delay
+                }, 1500); // 1.5 seconds after last input
+            }
+        });
+
+
         messageInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 sendMessageBtn.click();
+                e.preventDefault(); // Prevent new line in input
             }
         });
 
@@ -790,27 +1194,210 @@
         updateGroupListUI();
 
         // Search functionality (basic client-side filter)
+        let searchTimeout;
         searchInput.addEventListener('input', () => {
-            const searchTerm = searchInput.value.toLowerCase();
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const searchTerm = searchInput.value.toLowerCase();
 
-            directMessagesList.querySelectorAll('.flex.items-center').forEach(item => {
-                const name = item.querySelector('.font-semibold').textContent.toLowerCase();
-                if (name.includes(searchTerm)) {
-                    item.classList.remove('hidden');
-                } else {
-                    item.classList.add('hidden');
-                }
-            });
+                directMessagesList.querySelectorAll('.flex.items-center').forEach(item => {
+                    const name = item.querySelector('.font-semibold').textContent.toLowerCase();
+                    if (name.includes(searchTerm)) {
+                        item.classList.remove('hidden');
+                    } else {
+                        item.classList.add('hidden');
+                    }
+                });
 
-            groupsList.querySelectorAll('.flex.items-center').forEach(item => {
-                const name = item.querySelector('.font-semibold').textContent.toLowerCase();
-                if (name.includes(searchTerm)) {
-                    item.classList.remove('hidden');
-                } else {
-                    item.classList.add('hidden');
-                }
-            });
+                groupsList.querySelectorAll('.flex.items-center').forEach(item => {
+                    const name = item.querySelector('.font-semibold').textContent.toLowerCase();
+                    if (name.includes(searchTerm)) {
+                        item.classList.remove('hidden');
+                    } else {
+                        item.classList.add('hidden');
+                    }
+                });
+            }, 300); // Debounce by 300ms
         });
+
+        // Responsive Sidebar Toggle
+        sidebarToggleBtn.addEventListener('click', () => {
+            leftSidebar.classList.toggle('sidebar-hidden');
+            if (leftSidebar.classList.contains('sidebar-hidden')) {
+                // Create overlay when sidebar is hidden on mobile
+                const overlay = document.createElement('div');
+                overlay.className = 'sidebar-overlay';
+                overlay.onclick = () => {
+                    leftSidebar.classList.add('sidebar-hidden');
+                    overlay.remove();
+                };
+                document.body.appendChild(overlay);
+            } else {
+                // Remove overlay if sidebar is shown
+                document.querySelector('.sidebar-overlay')?.remove();
+            }
+        });
+
+        // Improved Scroll to New Message
+        messagesDisplay.addEventListener('scroll', () => {
+            const { scrollTop, scrollHeight, clientHeight } = messagesDisplay;
+            if (scrollHeight - scrollTop > clientHeight + 100) { // If not at bottom + 100px buffer
+                jumpToLatestBtn.classList.remove('hidden');
+            } else {
+                jumpToLatestBtn.classList.add('hidden');
+            }
+        });
+
+        jumpToLatestBtn.addEventListener('click', () => {
+            messagesDisplay.scrollTop = messagesDisplay.scrollHeight;
+        });
+
+        // Debug Panel Toggle
+        debugPanelToggle.addEventListener('click', () => {
+            debugPanelContent.classList.toggle('hidden');
+        });
+
+        // --- File Sharing (Conceptual) ---
+        // This would involve adding a file input button in the chat-input-area
+        // Example: <input type="file" id="file-input" class="hidden">
+        // And a button: <button id="attach-file-btn" class="p-3 bg-gray-300 rounded-lg">📎</button>
+        // Then in JS:
+        /*
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.id = 'file-input';
+        fileInput.classList.add('hidden');
+        document.body.appendChild(fileInput); // Append to body or somewhere accessible
+
+        const attachFileBtn = document.createElement('button');
+        attachFileBtn.id = 'attach-file-btn';
+        attachFileBtn.className = 'p-3 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200';
+        attachFileBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-paperclip"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>';
+        document.getElementById('chat-input-area').insertBefore(attachFileBtn, messageInput);
+
+        attachFileBtn.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (file.size > 10 * 1024 * 1024) { // Limit to 10MB for P2P
+                alert('File is too large. Max 10MB for P2P transfer.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                const fileData = event.target.result; // ArrayBuffer
+                const messageData = {
+                    senderId: myId,
+                    text: `[File: ${file.name}]`,
+                    timestamp: Date.now(),
+                    isMe: true,
+                    type: 'file_transfer', // Custom type for file transfer
+                    fileName: file.name,
+                    fileType: file.type,
+                    fileSize: file.size,
+                    fileData: fileData // The actual file data (ArrayBuffer)
+                };
+
+                addMessageToDisplay({ text: `Sending file: ${file.name}`, timestamp: Date.now(), type: 'system' }, myId, false, 'system');
+                await saveMessageToDB(activeChat.id, { ...messageData, fileData: null }); // Don't save raw fileData to DB
+
+                if (activeChat.type === 'user') {
+                    const conn = directConnections.get(activeChat.id);
+                    if (conn && conn.open) {
+                        conn.send(JSON.stringify(messageData)); // Send file metadata + data
+                    } else {
+                        addMessageToDisplay({ text: `Error: Not connected to send file.`, timestamp: Date.now() }, myId, false, 'system');
+                    }
+                } else if (activeChat.type === 'group') {
+                    // File sharing in groups is complex: would need to send to each member
+                    // Or, if file is hosted, send URL. For P2P, send data to each.
+                    alert('File sharing in groups is not fully implemented in this static P2P version.');
+                }
+            };
+            reader.readAsArrayBuffer(file); // Read file as ArrayBuffer
+        });
+        */
+
+        // --- Audio/Video Calling (Conceptual UI) ---
+        // This would require more complex PeerJS media stream handling and UI.
+        // Adding buttons for conceptual display.
+        /*
+        const videoCallBtn = document.createElement('button');
+        videoCallBtn.className = 'p-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition-colors duration-200 ml-2';
+        videoCallBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-video"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>';
+        videoCallBtn.title = 'Start Video Call (Conceptual)';
+        videoCallBtn.onclick = () => alert('Video calling is a complex feature for static P2P and requires advanced WebRTC/PeerJS media stream handling.');
+        chatHeader.appendChild(videoCallBtn);
+        */
+
+        // --- Message Reactions (Conceptual UI) ---
+        // This would involve adding a small button next to messages on hover/click
+        // and sending a special message type.
+        /*
+        function addReactionButton(messageElement, messageId) {
+            const reactBtn = document.createElement('button');
+            reactBtn.className = 'absolute -top-3 right-0 bg-gray-100 dark:bg-gray-700 p-1 rounded-full text-xs hidden group-hover:block';
+            reactBtn.textContent = '👍'; // Example emoji
+            reactBtn.onclick = () => {
+                if (activeConnection && activeConnection.open) {
+                    activeConnection.send(JSON.stringify({ type: 'message_reaction', messageId: messageId, emoji: '👍' }));
+                    // Locally add reaction
+                    let reactionsDiv = messageElement.querySelector('.reactions-div');
+                    if (!reactionsDiv) {
+                        reactionsDiv = document.createElement('div');
+                        reactionsDiv.className = 'reactions-div absolute -bottom-3 right-0 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full text-xs shadow-md';
+                        messageElement.querySelector('.message-bubble').appendChild(reactionsDiv);
+                    }
+                    reactionsDiv.textContent = (reactionsDiv.textContent || '') + '�';
+                }
+            };
+            messageElement.querySelector('.message-bubble').appendChild(reactBtn);
+        }
+        */
+
+        // --- Message Edit/Delete (Conceptual UI) ---
+        // This would involve context menus or edit buttons.
+        /*
+        function addEditDeleteButtons(messageElement, messageId, currentText) {
+            const menuDiv = document.createElement('div');
+            menuDiv.className = 'absolute -top-3 left-0 bg-gray-100 dark:bg-gray-700 p-1 rounded-md text-xs hidden group-hover:flex space-x-1';
+
+            const editBtn = document.createElement('button');
+            editBtn.textContent = 'Edit';
+            editBtn.className = 'text-blue-500 hover:underline';
+            editBtn.onclick = () => {
+                const newText = prompt('Edit message:', currentText);
+                if (newText && newText.trim() !== currentText) {
+                    if (activeConnection && activeConnection.open) {
+                        activeConnection.send(JSON.stringify({ type: 'message_edit', messageId: messageId, newText: newText.trim() }));
+                        messageElement.querySelector('.message-content p').textContent = newText.trim() + ' (edited)';
+                        updateMessageInDB(activeChat.id, messageId, { text: newText.trim(), edited: true });
+                    }
+                }
+            };
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'Delete';
+            deleteBtn.className = 'text-red-500 hover:underline';
+            deleteBtn.onclick = () => {
+                if (confirm('Are you sure you want to delete this message?')) {
+                    if (activeConnection && activeConnection.open) {
+                        activeConnection.send(JSON.stringify({ type: 'message_delete', messageId: messageId }));
+                        messageElement.querySelector('.message-content').innerHTML = '<span class="italic text-gray-500 dark:text-gray-400">This message was deleted.</span>';
+                        updateMessageInDB(activeChat.id, messageId, { deleted: true });
+                    }
+                }
+            };
+
+            menuDiv.appendChild(editBtn);
+            menuDiv.appendChild(deleteBtn);
+            messageElement.querySelector('.message-bubble').appendChild(menuDiv);
+        }
+        */
     </script>
 </body>
 </html>
+�
