@@ -1,769 +1,682 @@
-import React, { useState, useEffect, createContext, useContext, useRef } from 'react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, signInAnonymously } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, onSnapshot, addDoc, serverTimestamp, orderBy, limit, updateDoc } from 'firebase/firestore';
-
-// Lucide React Icons (replace with actual imports if using a bundler, or inline SVGs)
-const Mail = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-mail"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>;
-const Lock = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-lock"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>;
-const User = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
-const MessageSquare = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-message-square"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>;
-const Users = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87L16 14"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
-const Search = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-search"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>;
-const Plus = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-plus"><path d="M12 5v14"/><path d="M5 12h14"/></svg>;
-const Send = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-send"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></svg>;
-const LogOut = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="17 16 22 12 17 8"/><line x1="22" x2="11" y1="12" y2="12"/></svg>;
-const Settings = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-settings"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.78 1.28a2 2 0 0 0 .73 2.73l.04.02a2 2 0 0 1 .97 1.95v.44a2 2 0 0 1-.97 1.95l-.04.02a2 2 0 0 0-.73 2.73l.78 1.28a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.78-1.28a2 2 0 0 0-.73-2.73l-.04-.02a2 2 0 0 1-.97-1.95v-.44a2 2 0 0 1 .97-1.95l.04-.02a2 2 0 0 0 .73-2.73l-.78-1.28a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>;
-
-// Firebase Context to provide Firebase instances to components
-const FirebaseContext = createContext(null);
-
-// Firebase Provider Component
-const FirebaseProvider = ({ children }) => {
-    const [app, setApp] = useState(null);
-    const [auth, setAuth] = useState(null);
-    const [db, setDb] = useState(null);
-    const [currentUser, setCurrentUser] = useState(null);
-    const [isAuthReady, setIsAuthReady] = useState(false);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        try {
-            // Retrieve Firebase config and app ID from global variables
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-            // Initialize Firebase App
-            const firebaseApp = initializeApp(firebaseConfig);
-            setApp(firebaseApp);
-
-            // Initialize Auth and Firestore
-            const firebaseAuth = getAuth(firebaseApp);
-            const firestoreDb = getFirestore(firebaseApp);
-            setAuth(firebaseAuth);
-            setDb(firestoreDb);
-
-            // Sign in with custom token or anonymously
-            const signIn = async () => {
-                try {
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(firebaseAuth, initialAuthToken);
-                        console.log("Signed in with custom token.");
-                    } else {
-                        await signInAnonymously(firebaseAuth);
-                        console.log("Signed in anonymously.");
-                    }
-                } catch (error) {
-                    console.error("Firebase sign-in error:", error);
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            // Listen for auth state changes
-            const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
-                setCurrentUser(user);
-                setIsAuthReady(true);
-                setLoading(false); // Set loading to false once auth state is known
-            });
-
-            if (!firebaseAuth.currentUser) {
-                signIn(); // Attempt sign-in if no current user
-            } else {
-                setLoading(false); // If user already exists, stop loading
-            }
-
-            return () => unsubscribe(); // Cleanup auth listener
-        } catch (error) {
-            console.error("Error initializing Firebase:", error);
-            setLoading(false);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chit Chat - Static P2P</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            @apply bg-gray-100 text-gray-900 min-h-screen flex items-center justify-center p-4;
         }
-    }, []);
-
-    const value = { app, auth, db, currentUser, isAuthReady, loading };
-
-    return (
-        <FirebaseContext.Provider value={value}>
-            {children}
-        </FirebaseContext.Provider>
-    );
-};
-
-// Custom hook to use Firebase context
-const useFirebase = () => useContext(FirebaseContext);
-
-// --- Auth Component ---
-const Auth = () => {
-    const { auth, db, isAuthReady, loading } = useFirebase();
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [username, setUsername] = useState('');
-    const [isRegistering, setIsRegistering] = useState(false);
-    const [error, setError] = useState('');
-    const [message, setMessage] = useState('');
-
-    const handleAuth = async (e) => {
-        e.preventDefault();
-        setError('');
-        setMessage('');
-
-        if (!isAuthReady) {
-            setError('Firebase is not ready yet. Please wait.');
-            return;
+        /* Custom scrollbar for chat messages */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
         }
-
-        try {
-            if (isRegistering) {
-                // Register
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
-
-                // Store user data in Firestore
-                await setDoc(doc(db, 'users', user.uid), {
-                    email: user.email,
-                    username: username,
-                    createdAt: serverTimestamp(),
-                    profilePicUrl: '', // Placeholder
-                    status: 'online'
-                });
-                setMessage('Registration successful! Logging in...');
-            } else {
-                // Login
-                await signInWithEmailAndPassword(auth, email, password);
-                setMessage('Login successful!');
-            }
-        } catch (err) {
-            console.error("Auth error:", err);
-            setError(err.message);
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
         }
-    };
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body class="light">
+    <div id="app-container" class="flex flex-col md:flex-row h-[90vh] w-full max-w-6xl bg-white rounded-xl shadow-2xl overflow-hidden">
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-100">
-                <div className="text-xl font-semibold text-gray-700">Loading Firebase...</div>
+        <div class="w-full md:w-80 bg-white border-r border-gray-200 flex flex-col p-4">
+            <div class="flex items-center justify-between pb-4 border-b border-gray-200 mb-4">
+                <h2 class="text-2xl font-bold text-blue-600">Chit Chat</h2>
+                <div class="flex space-x-2">
+                    <button id="create-group-btn" class="p-2 rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors duration-200" title="New Group">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-plus"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                    </button>
+                    <button id="theme-toggle-btn" class="p-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors duration-200" title="Toggle Theme">
+                        🌙
+                    </button>
+                </div>
             </div>
-        );
-    }
 
-    return (
-        <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 p-4">
-            <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md transform transition-all duration-300 hover:scale-105">
-                <h2 className="text-3xl font-bold text-center text-gray-800 mb-8">
-                    {isRegistering ? 'Sign Up for Chit Chat' : 'Welcome Back to Chit Chat'}
-                </h2>
-                {error && <p className="bg-red-100 text-red-700 p-3 rounded-md mb-4 text-sm">{error}</p>}
-                {message && <p className="bg-green-100 text-green-700 p-3 rounded-md mb-4 text-sm">{message}</p>}
-                <form onSubmit={handleAuth} className="space-y-6">
-                    {isRegistering && (
-                        <div>
-                            <label className="block text-gray-700 text-sm font-semibold mb-2" htmlFor="username">
-                                <User className="inline-block mr-2 text-blue-500" size={18} /> Username
-                            </label>
-                            <input
-                                type="text"
-                                id="username"
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition duration-200"
-                                placeholder="Choose a username"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                required={isRegistering}
-                            />
-                        </div>
-                    )}
-                    <div>
-                        <label className="block text-gray-700 text-sm font-semibold mb-2" htmlFor="email">
-                            <Mail className="inline-block mr-2 text-blue-500" size={18} /> Email
-                        </label>
-                        <input
-                            type="email"
-                            id="email"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition duration-200"
-                            placeholder="your@example.com"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-gray-700 text-sm font-semibold mb-2" htmlFor="password">
-                            <Lock className="inline-block mr-2 text-blue-500" size={18} /> Password
-                        </label>
-                        <input
-                            type="password"
-                            id="password"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-transparent transition duration-200"
-                            placeholder="********"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                        />
-                    </div>
-                    <button
-                        type="submit"
-                        className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold text-lg hover:bg-blue-700 transition duration-300 shadow-md hover:shadow-lg"
-                    >
-                        {isRegistering ? 'Sign Up' : 'Log In'}
-                    </button>
-                </form>
-                <p className="text-center text-gray-600 mt-6">
-                    {isRegistering ? 'Already have an account?' : "Don't have an account?"}{' '}
-                    <button
-                        type="button"
-                        onClick={() => setIsRegistering(!isRegistering)}
-                        className="text-blue-600 font-semibold hover:underline"
-                    >
-                        {isRegistering ? 'Log In' : 'Sign Up'}
-                    </button>
-                </p>
+            <div class="mb-4">
+                <div class="relative">
+                    <input type="text" id="search-input" placeholder="Search users or groups..." class="w-full p-2 pl-10 rounded-lg bg-gray-100 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                </div>
+            </div>
+
+            <div id="my-id-section" class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-sm text-blue-800">
+                <strong>Your ID:</strong> <span id="my-peer-id" class="font-semibold cursor-pointer select-all">Loading...</span>
+                <p class="text-xs text-blue-600 mt-1">Click ID to copy. Share this to connect!</p>
+            </div>
+
+            <div class="flex-1 overflow-y-auto custom-scrollbar">
+                <h3 class="text-lg font-semibold px-2 pt-2 pb-2 text-gray-700">Direct Messages</h3>
+                <div id="direct-messages-list">
+                    <p class="text-sm text-gray-500 px-2" id="no-direct-chats">No direct chats yet. Add a friend!</p>
+                </div>
+
+                <h3 class="text-lg font-semibold px-2 pt-4 pb-2 text-gray-700">Groups</h3>
+                <div id="groups-list">
+                    <p class="text-sm text-gray-500 px-2" id="no-groups">No groups created yet.</p>
+                </div>
             </div>
         </div>
-    );
-};
 
-// --- Dashboard Component ---
-const Dashboard = () => {
-    const { auth, db, currentUser, isAuthReady, loading } = useFirebase();
-    const [activeChat, setActiveChat] = useState(null); // { type: 'user' | 'group', id: 'chatId' | 'groupId', name: 'Chat Name' }
-    const [users, setUsers] = useState([]);
-    const [groups, setGroups] = useState([]);
-    const [myProfile, setMyProfile] = useState(null);
-    const [isCreatingGroup, setIsCreatingGroup] = useState(false);
-    const [newGroupName, setNewGroupName] = useState('');
-    const [selectedUsersForGroup, setSelectedUsersForGroup] = useState([]);
-    const [showSettingsModal, setShowSettingsModal] = useState(false);
-    const [theme, setTheme] = useState(localStorage.getItem('chitchat-theme') || 'light');
-
-    useEffect(() => {
-        document.documentElement.classList.remove('light', 'dark');
-        document.documentElement.classList.add(theme);
-        localStorage.setItem('chitchat-theme', theme);
-    }, [theme]);
-
-    const toggleTheme = () => {
-        setTheme((prevTheme) => (prevTheme === 'light' ? 'dark' : 'light'));
-    };
-
-    useEffect(() => {
-        if (!isAuthReady || !currentUser || !db) return;
-
-        // Fetch current user's profile
-        const myProfileRef = doc(db, 'users', currentUser.uid);
-        const unsubscribeMyProfile = onSnapshot(myProfileRef, (docSnap) => {
-            if (docSnap.exists()) {
-                setMyProfile({ id: docSnap.id, ...docSnap.data() });
-            }
-        });
-
-        // Fetch all users (for contacts and group creation)
-        const usersQuery = query(collection(db, 'users'));
-        const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
-            const fetchedUsers = snapshot.docs
-                .map(doc => ({ id: doc.id, ...doc.data() }))
-                .filter(user => user.id !== currentUser.uid); // Exclude self
-            setUsers(fetchedUsers);
-        });
-
-        // Fetch groups where current user is a member
-        const groupsQuery = query(collection(db, 'groups'), where('members', 'array-contains', currentUser.uid));
-        const unsubscribeGroups = onSnapshot(groupsQuery, (snapshot) => {
-            const fetchedGroups = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setGroups(fetchedGroups);
-        });
-
-        return () => {
-            unsubscribeMyProfile();
-            unsubscribeUsers();
-            unsubscribeGroups();
-        };
-    }, [isAuthReady, currentUser, db]);
-
-    const handleLogout = async () => {
-        try {
-            await signOut(auth);
-            // Clear any local storage related to chat state if necessary
-        } catch (error) {
-            console.error("Logout error:", error);
-        }
-    };
-
-    const startChatWithUser = async (user) => {
-        // Create a unique chat ID for 1-to-1 chat
-        const participants = [currentUser.uid, user.id].sort();
-        const chatId = participants.join('_'); // e.g., 'user1_user2'
-
-        // Check if chat document exists, if not, create it
-        const chatRef = doc(db, 'chats', chatId);
-        const chatSnap = await getDoc(chatRef);
-
-        if (!chatSnap.exists()) {
-            await setDoc(chatRef, {
-                participants: participants,
-                createdAt: serverTimestamp(),
-                lastMessage: '',
-                lastMessageTimestamp: null
-            });
-        }
-        setActiveChat({ type: 'user', id: chatId, name: user.username, peerId: user.id });
-    };
-
-    const startGroupChat = (group) => {
-        setActiveChat({ type: 'group', id: group.id, name: group.name });
-    };
-
-    const handleCreateGroup = async () => {
-        if (!newGroupName.trim() || selectedUsersForGroup.length === 0) {
-            alert('Please enter a group name and select at least one member.');
-            return;
-        }
-
-        const members = [currentUser.uid, ...selectedUsersForGroup];
-        try {
-            const newGroupRef = await addDoc(collection(db, 'groups'), {
-                name: newGroupName,
-                members: members,
-                adminIds: [currentUser.uid], // Creator is admin
-                createdAt: serverTimestamp(),
-                lastMessage: '',
-                lastMessageTimestamp: null
-            });
-            alert(`Group "${newGroupName}" created!`);
-            setIsCreatingGroup(false);
-            setNewGroupName('');
-            setSelectedUsersForGroup([]);
-            startGroupChat({ id: newGroupRef.id, name: newGroupName }); // Automatically open the new group chat
-        } catch (error) {
-            console.error("Error creating group:", error);
-            alert("Failed to create group. See console for details.");
-        }
-    };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-100">
-                <div className="text-xl font-semibold text-gray-700">Loading user data...</div>
-            </div>
-        );
-    }
-
-    if (!currentUser || !myProfile) {
-        // This case should ideally not happen if FirebaseProvider handles auth correctly
-        // but as a fallback, if currentUser is null, it means not authenticated.
-        return <Auth />;
-    }
-
-    return (
-        <div className="flex h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
-            {/* Left Sidebar */}
-            <div className="w-80 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col shadow-lg">
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-                    <h2 className="text-2xl font-bold text-blue-600 dark:text-blue-400">Chit Chat</h2>
-                    <div className="flex items-center space-x-2">
-                        <button
-                            onClick={() => setIsCreatingGroup(true)}
-                            className="p-2 rounded-full bg-green-500 text-white hover:bg-green-600 transition-colors duration-200"
-                            title="New Group"
-                        >
-                            <Plus size={20} />
-                        </button>
-                        <button
-                            onClick={toggleTheme}
-                            className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
-                            title="Toggle Theme"
-                        >
-                            {theme === 'light' ? '🌙' : '☀️'}
-                        </button>
-                        <button
-                            onClick={() => setShowSettingsModal(true)}
-                            className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-200"
-                            title="Settings"
-                        >
-                            <Settings size={20} />
-                        </button>
-                        <button
-                            onClick={handleLogout}
-                            className="p-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors duration-200"
-                            title="Logout"
-                        >
-                            <LogOut size={20} />
-                        </button>
-                    </div>
+        <div class="flex-1 flex flex-col bg-gray-50 border-l border-gray-200">
+            <div id="chat-header" class="bg-white p-4 border-b border-gray-200 shadow-sm flex items-center justify-between">
+                <h3 class="text-xl font-semibold text-gray-800" id="current-chat-name">Select a chat</h3>
                 </div>
 
-                <div className="p-4">
-                    <div className="relative">
-                        <input
-                            type="text"
-                            placeholder="Search users or groups..."
-                            className="w-full p-2 pl-10 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                        />
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400" size={18} />
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto">
-                    <h3 className="text-lg font-semibold px-4 pt-4 pb-2 text-gray-700 dark:text-gray-300">Direct Messages</h3>
-                    {users.length === 0 && <p className="text-sm text-gray-500 px-4">No other users found.</p>}
-                    {users.map(user => (
-                        <div
-                            key={user.id}
-                            className={`flex items-center p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 ${activeChat?.type === 'user' && activeChat?.peerId === user.id ? 'bg-blue-100 dark:bg-blue-700' : ''}`}
-                            onClick={() => startChatWithUser(user)}
-                        >
-                            <div className="w-10 h-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center text-white font-bold mr-3">
-                                {user.username ? user.username[0].toUpperCase() : 'U'}
-                            </div>
-                            <div>
-                                <p className="font-semibold">{user.username || user.email}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">Last message preview...</p>
-                            </div>
-                        </div>
-                    ))}
-
-                    <h3 className="text-lg font-semibold px-4 pt-4 pb-2 text-gray-700 dark:text-gray-300">Groups</h3>
-                    {groups.length === 0 && <p className="text-sm text-gray-500 px-4">No groups joined yet.</p>}
-                    {groups.map(group => (
-                        <div
-                            key={group.id}
-                            className={`flex items-center p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200 ${activeChat?.type === 'group' && activeChat?.id === group.id ? 'bg-blue-100 dark:bg-blue-700' : ''}`}
-                            onClick={() => startGroupChat(group)}
-                        >
-                            <div className="w-10 h-10 rounded-full bg-purple-300 dark:bg-purple-600 flex items-center justify-center text-white font-bold mr-3">
-                                <Users size={20} />
-                            </div>
-                            <div>
-                                <p className="font-semibold">{group.name}</p>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 truncate">Last group message...</p>
-                            </div>
-                        </div>
-                    ))}
+            <div id="messages-display" class="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                <div class="text-center text-gray-500 text-sm mt-4" id="initial-chat-message">
+                    Start by connecting to a friend or creating a group!
                 </div>
             </div>
 
-            {/* Center Area (Chat Window) */}
-            <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-800">
-                {!activeChat ? (
-                    <div className="flex-1 flex items-center justify-center text-gray-500 dark:text-gray-400 text-lg">
-                        Select a chat to start messaging
-                    </div>
-                ) : (
-                    <ChatWindow chat={activeChat} currentUser={myProfile} />
-                )}
-            </div>
-
-            {/* Right Sidebar (Optional User Info Panel - Placeholder) */}
-            {/* You can implement this to show user/group info when activeChat is selected */}
-            {/* <div className="w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col shadow-lg">
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                    <h3 className="text-xl font-semibold">User Info</h3>
-                </div>
-                <div className="flex-1 p-4">
-                    <p className="text-gray-600 dark:text-gray-300">Click on a chat to see details here.</p>
-                </div>
-            </div> */}
-
-            {/* New Group Modal */}
-            {isCreatingGroup && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
-                        <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">Create New Group</h2>
-                        <div className="mb-4">
-                            <label className="block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2" htmlFor="group-name">
-                                Group Name
-                            </label>
-                            <input
-                                type="text"
-                                id="group-name"
-                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-400"
-                                placeholder="Enter group name"
-                                value={newGroupName}
-                                onChange={(e) => setNewGroupName(e.target.value)}
-                            />
-                        </div>
-                        <div className="mb-6">
-                            <label className="block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2">
-                                Select Members
-                            </label>
-                            <div className="h-40 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-2 bg-gray-100 dark:bg-gray-700">
-                                {users.map(user => (
-                                    <div key={user.id} className="flex items-center mb-2">
-                                        <input
-                                            type="checkbox"
-                                            id={`user-${user.id}`}
-                                            className="mr-2 h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
-                                            checked={selectedUsersForGroup.includes(user.id)}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    setSelectedUsersForGroup([...selectedUsersForGroup, user.id]);
-                                                } else {
-                                                    setSelectedUsersForGroup(selectedUsersForGroup.filter(id => id !== user.id));
-                                                }
-                                            }}
-                                        />
-                                        <label htmlFor={`user-${user.id}`} className="text-gray-800 dark:text-gray-100">
-                                            {user.username || user.email}
-                                        </label>
-                                    </div>
-                                ))}
-                                {users.length === 0 && <p className="text-sm text-gray-500">No other users to add.</p>}
-                            </div>
-                        </div>
-                        <div className="flex justify-end space-x-4">
-                            <button
-                                onClick={() => setIsCreatingGroup(false)}
-                                className="px-5 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-100 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors duration-200"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleCreateGroup}
-                                className="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-                            >
-                                Create Group
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Settings Modal */}
-            {showSettingsModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
-                        <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">Settings</h2>
-                        <div className="mb-4">
-                            <label className="block text-gray-700 dark:text-gray-300 text-sm font-semibold mb-2">
-                                Theme
-                            </label>
-                            <div className="flex items-center space-x-4">
-                                <label className="inline-flex items-center">
-                                    <input
-                                        type="radio"
-                                        className="form-radio text-blue-600"
-                                        name="theme"
-                                        value="light"
-                                        checked={theme === 'light'}
-                                        onChange={toggleTheme}
-                                    />
-                                    <span className="ml-2 text-gray-800 dark:text-gray-100">Light</span>
-                                </label>
-                                <label className="inline-flex items-center">
-                                    <input
-                                        type="radio"
-                                        className="form-radio text-blue-600"
-                                        name="theme"
-                                        value="dark"
-                                        checked={theme === 'dark'}
-                                        onChange={toggleTheme}
-                                    />
-                                    <span className="ml-2 text-gray-800 dark:text-gray-100">Dark</span>
-                                </label>
-                            </div>
-                        </div>
-                        <div className="flex justify-end">
-                            <button
-                                onClick={() => setShowSettingsModal(false)}
-                                className="px-5 py-2 bg-gray-300 dark:bg-gray-600 text-gray-800 dark:text-gray-100 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-700 transition-colors duration-200"
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
-
-// --- ChatWindow Component ---
-const ChatWindow = ({ chat, currentUser }) => {
-    const { db } = useFirebase();
-    const [messages, setMessages] = useState([]);
-    const [newMessage, setNewMessage] = useState('');
-    const messagesEndRef = useRef(null);
-    const [chatParticipants, setChatParticipants] = useState({}); // Map of userId to username
-
-    useEffect(() => {
-        if (!db || !chat) return;
-
-        let messagesRef;
-        let participantsIds = [];
-
-        if (chat.type === 'user') {
-            messagesRef = collection(db, 'chats', chat.id, 'messages');
-            participantsIds = chat.id.split('_');
-        } else if (chat.type === 'group') {
-            messagesRef = collection(db, 'groups', chat.id, 'messages');
-            // Fetch group members to get their usernames
-            const groupDocRef = doc(db, 'groups', chat.id);
-            const unsubscribeGroup = onSnapshot(groupDocRef, (docSnap) => {
-                if (docSnap.exists()) {
-                    participantsIds = docSnap.data().members;
-                    fetchParticipantUsernames(participantsIds);
-                }
-            });
-            return () => unsubscribeGroup(); // Cleanup group listener
-        }
-
-        // Fetch usernames for all participants
-        const fetchParticipantUsernames = async (ids) => {
-            const names = {};
-            for (const id of ids) {
-                if (!names[id]) { // Avoid refetching
-                    const userDoc = await getDoc(doc(db, 'users', id));
-                    if (userDoc.exists()) {
-                        names[id] = userDoc.data().username || userDoc.data().email;
-                    } else {
-                        names[id] = 'Unknown User';
-                    }
-                }
-            }
-            setChatParticipants(prev => ({ ...prev, ...names }));
-        };
-
-        // Initial fetch for 1-to-1 chat participants
-        if (chat.type === 'user') {
-            fetchParticipantUsernames(participantsIds);
-        }
-
-        const q = query(messagesRef, orderBy('timestamp', 'asc'), limit(50)); // Limit to last 50 messages
-        const unsubscribeMessages = onSnapshot(q, (snapshot) => {
-            const fetchedMessages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setMessages(fetchedMessages);
-        });
-
-        return () => unsubscribeMessages();
-    }, [db, chat, currentUser]);
-
-    useEffect(() => {
-        // Scroll to bottom when messages load or new messages arrive
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
-
-    const handleSendMessage = async (e) => {
-        e.preventDefault();
-        if (!newMessage.trim() || !currentUser || !db) return;
-
-        let messagesCollectionRef;
-        if (chat.type === 'user') {
-            messagesCollectionRef = collection(db, 'chats', chat.id, 'messages');
-            // Update last message in chat document
-            await updateDoc(doc(db, 'chats', chat.id), {
-                lastMessage: newMessage.trim(),
-                lastMessageTimestamp: serverTimestamp()
-            });
-        } else if (chat.type === 'group') {
-            messagesCollectionRef = collection(db, 'groups', chat.id, 'messages');
-            // Update last message in group document
-            await updateDoc(doc(db, 'groups', chat.id), {
-                lastMessage: newMessage.trim(),
-                lastMessageTimestamp: serverTimestamp()
-            });
-        }
-
-        try {
-            await addDoc(messagesCollectionRef, {
-                senderId: currentUser.uid,
-                text: newMessage.trim(),
-                timestamp: serverTimestamp()
-            });
-            setNewMessage('');
-        } catch (error) {
-            console.error("Error sending message:", error);
-            alert("Failed to send message. See console for details.");
-        }
-    };
-
-    const formatTimestamp = (timestamp) => {
-        if (!timestamp) return '';
-        const date = timestamp.toDate();
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    };
-
-    return (
-        <div className="flex flex-col flex-1">
-            <div className="bg-white dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-                <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100">
-                    {chat.name}
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {chat.type === 'user' ? 'Direct Message' : 'Group Chat'}
-                </p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 dark:bg-gray-900">
-                {messages.map(msg => (
-                    <div
-                        key={msg.id}
-                        className={`flex ${msg.senderId === currentUser.uid ? 'justify-end' : 'justify-start'}`}
-                    >
-                        <div
-                            className={`max-w-xs md:max-w-md p-3 rounded-lg shadow-sm relative ${
-                                msg.senderId === currentUser.uid
-                                    ? 'bg-blue-500 text-white rounded-br-none'
-                                    : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-bl-none'
-                            }`}
-                        >
-                            {msg.senderId !== currentUser.uid && chat.type === 'group' && (
-                                <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">
-                                    {chatParticipants[msg.senderId] || 'Loading...'}
-                                </p>
-                            )}
-                            <p className="text-sm">{msg.text}</p>
-                            <span className={`absolute bottom-1 text-xs ${msg.senderId === currentUser.uid ? 'right-2 text-blue-200' : 'left-2 text-gray-500 dark:text-gray-400'}`}>
-                                {formatTimestamp(msg.timestamp)}
-                            </span>
-                        </div>
-                    </div>
-                ))}
-                <div ref={messagesEndRef} /> {/* Scroll target */}
-            </div>
-
-            <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex items-center space-x-3">
-                <input
-                    type="text"
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    placeholder="Type a message..."
-                    className="flex-1 p-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-                <button
-                    type="submit"
-                    className="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md"
-                >
-                    <Send size={20} />
+            <div id="chat-input-area" class="p-4 bg-white border-t border-gray-200 flex items-center space-x-3">
+                <input type="text" id="message-input" placeholder="Type a message..." class="flex-1 p-3 rounded-lg border border-gray-300 bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <button id="send-message-btn" class="p-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-send"><path d="m22 2-7 20-4-9-9-4 20-7Z"/><path d="M22 2 11 13"/></svg>
                 </button>
-            </form>
-        </div>
-    );
-};
-
-// --- Main App Component ---
-const App = () => {
-    const { currentUser, isAuthReady, loading } = useFirebase();
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900">
-                <div className="text-xl font-semibold text-gray-700 dark:text-gray-300">Initializing Chit Chat...</div>
             </div>
-        );
-    }
-
-    return (
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-900">
-            {isAuthReady && currentUser ? <Dashboard /> : <Auth />}
         </div>
-    );
-};
 
-// Default export for the React App
-export default function AppWrapper() {
-    return (
-        <FirebaseProvider>
-            <App />
-        </FirebaseProvider>
-    );
-}
+        <div id="info-sidebar" class="w-full md:w-80 bg-white border-l border-gray-200 flex-col p-4 hidden">
+            <div class="pb-4 border-b border-gray-200 mb-4">
+                <h3 class="text-xl font-semibold text-gray-800" id="info-sidebar-title">Chat Info</h3>
+            </div>
+            <div id="info-sidebar-content" class="flex-1 overflow-y-auto custom-scrollbar">
+                </div>
+        </div>
 
+    </div>
+
+    <div id="add-friend-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Add a Friend</h2>
+            <div class="mb-4">
+                <label for="friend-id-input" class="block text-gray-700 text-sm font-semibold mb-2">Friend's Peer ID</label>
+                <input type="text" id="friend-id-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-blue-400" placeholder="Enter friend's full Peer ID">
+            </div>
+            <p id="add-friend-status" class="text-sm text-gray-600 mb-4"></p>
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-add-friend-btn" class="px-5 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200">
+                    Cancel
+                </button>
+                <button id="confirm-add-friend-btn" class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+                    Connect
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="create-group-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden p-4">
+        <div class="bg-white p-8 rounded-lg shadow-xl w-full max-w-md">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Create New Group</h2>
+            <div class="mb-4">
+                <label for="group-name-input" class="block text-gray-700 text-sm font-semibold mb-2">Group Name</label>
+                <input type="text" id="group-name-input" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-blue-400" placeholder="Enter group name">
+            </div>
+            <div class="mb-6">
+                <label class="block text-gray-700 text-sm font-semibold mb-2">Select Members (by ID)</label>
+                <div class="flex items-center space-x-2 mb-2">
+                    <input type="text" id="add-member-id-input" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:ring-2 focus:ring-blue-400" placeholder="Enter member's Peer ID">
+                    <button id="add-member-btn" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200">Add</button>
+                </div>
+                <ul id="selected-members-list" class="h-40 overflow-y-auto border border-gray-300 rounded-lg p-2 bg-gray-100">
+                    </ul>
+            </div>
+            <p id="create-group-status" class="text-sm text-gray-600 mb-4"></p>
+            <div class="flex justify-end space-x-4">
+                <button id="cancel-create-group-btn" class="px-5 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 transition-colors duration-200">
+                    Cancel
+                </button>
+                <button id="confirm-create-group-btn" class="px-5 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200">
+                    Create Group
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- DOM Elements ---
+        const myPeerIdSpan = document.getElementById('my-peer-id');
+        const directMessagesList = document.getElementById('direct-messages-list');
+        const groupsList = document.getElementById('groups-list');
+        const noDirectChatsMsg = document.getElementById('no-direct-chats');
+        const noGroupsMsg = document.getElementById('no-groups');
+        const chatHeader = document.getElementById('chat-header');
+        const currentChatName = document.getElementById('current-chat-name');
+        const messagesDisplay = document.getElementById('messages-display');
+        const initialChatMessage = document.getElementById('initial-chat-message');
+        const messageInput = document.getElementById('message-input');
+        const sendMessageBtn = document.getElementById('send-message-btn');
+        const createGroupBtn = document.getElementById('create-group-btn');
+        const themeToggleBtn = document.getElementById('theme-toggle-btn');
+        const searchInput = document.getElementById('search-input');
+
+        // Modals
+        const addFriendModal = document.getElementById('add-friend-modal');
+        const friendIdInput = document.getElementById('friend-id-input');
+        const addFriendStatus = document.getElementById('add-friend-status');
+        const cancelAddFriendBtn = document.getElementById('cancel-add-friend-btn');
+        const confirmAddFriendBtn = document.getElementById('confirm-add-friend-btn');
+
+        const createGroupModal = document.getElementById('create-group-modal');
+        const groupNameInput = document.getElementById('group-name-input');
+        const addMemberIdInput = document.getElementById('add-member-id-input');
+        const addMemberBtn = document.getElementById('add-member-btn');
+        const selectedMembersList = document.getElementById('selected-members-list');
+        const createGroupStatus = document.getElementById('create-group-status');
+        const cancelCreateGroupBtn = document.getElementById('cancel-create-group-btn');
+        const confirmCreateGroupBtn = document.getElementById('confirm-create-group-btn');
+
+        // --- PeerJS Setup ---
+        let peer = null;
+        let myId = null;
+        let activeConnection = null; // Stores the current DataConnection object
+        let activeChat = { type: null, id: null, name: null }; // { type: 'user' | 'group', id: 'peerId' | 'groupId', name: 'Chat Name' }
+
+        // Store connections for direct messages (key: peerId, value: DataConnection)
+        const directConnections = new Map();
+        // Store group members (key: groupId, value: Set<peerId>)
+        const groupMembers = new Map();
+        // Store group names (key: groupId, value: groupName)
+        const groupNames = new Map();
+
+        // --- Local Storage Keys ---
+        const LS_FRIENDS_KEY = 'chitchat_friends';
+        const LS_GROUPS_KEY = 'chitchat_groups';
+        const LS_THEME_KEY = 'chitchat_theme';
+
+        // --- Data Structures from Local Storage ---
+        let friends = JSON.parse(localStorage.getItem(LS_FRIENDS_KEY) || '[]'); // Array of { id: peerId, name: 'Friend Name' (optional) }
+        let groups = JSON.parse(localStorage.getItem(LS_GROUPS_KEY) || '[]'); // Array of { id: groupId, name: groupName, members: [peerId1, peerId2] }
+
+        // --- Utility Functions ---
+        function saveFriends() {
+            localStorage.setItem(LS_FRIENDS_KEY, JSON.stringify(friends));
+        }
+
+        function saveGroups() {
+            localStorage.setItem(LS_GROUPS_KEY, JSON.stringify(groups));
+        }
+
+        function addMessageToDisplay(message, senderId, isMe = false, chatType = 'user') {
+            const messageElement = document.createElement('div');
+            messageElement.className = `flex mb-2 ${isMe ? 'justify-end' : 'justify-start'}`;
+
+            const bubble = document.createElement('div');
+            bubble.className = `max-w-[70%] p-3 rounded-lg shadow-sm relative ${
+                isMe ? 'bg-blue-500 text-white rounded-br-none' : 'bg-gray-200 text-gray-900 rounded-bl-none'
+            }`;
+
+            if (chatType === 'group' && !isMe) {
+                const senderName = getFriendName(senderId) || senderId.substring(0, 5); // Display short ID if no name
+                const senderSpan = document.createElement('p');
+                senderSpan.className = 'text-xs font-semibold text-gray-600 mb-1';
+                senderSpan.textContent = senderName;
+                bubble.appendChild(senderSpan);
+            }
+
+            const textSpan = document.createElement('p');
+            textSpan.className = 'text-sm';
+            textSpan.textContent = message;
+            bubble.appendChild(textSpan);
+
+            const timestampSpan = document.createElement('span');
+            timestampSpan.className = `absolute bottom-1 text-xs ${isMe ? 'right-2 text-blue-200' : 'left-2 text-gray-500'}`;
+            timestampSpan.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            bubble.appendChild(timestampSpan);
+
+            messageElement.appendChild(bubble);
+            messagesDisplay.appendChild(messageElement);
+            messagesDisplay.scrollTop = messagesDisplay.scrollHeight; // Scroll to bottom
+            initialChatMessage.classList.add('hidden'); // Hide initial message
+        }
+
+        function getFriendName(peerId) {
+            const friend = friends.find(f => f.id === peerId);
+            return friend ? friend.name : null;
+        }
+
+        function updateFriendListUI() {
+            directMessagesList.innerHTML = '';
+            if (friends.length === 0) {
+                noDirectChatsMsg.classList.remove('hidden');
+            } else {
+                noDirectChatsMsg.classList.add('hidden');
+                friends.forEach(friend => {
+                    const friendElement = document.createElement('div');
+                    friendElement.className = `flex items-center p-3 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors duration-200 ${activeChat.type === 'user' && activeChat.id === friend.id ? 'bg-blue-100' : ''}`;
+                    friendElement.innerHTML = `
+                        <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center text-white font-bold mr-3">
+                            ${friend.name ? friend.name[0].toUpperCase() : friend.id[0].toUpperCase()}
+                        </div>
+                        <div>
+                            <p class="font-semibold">${friend.name || friend.id.substring(0, 5)}</p>
+                            <p class="text-sm text-gray-500 truncate">Last message preview...</p>
+                        </div>
+                    `;
+                    friendElement.onclick = () => selectChat({ type: 'user', id: friend.id, name: friend.name || friend.id.substring(0, 5) });
+                    directMessagesList.appendChild(friendElement);
+                });
+            }
+        }
+
+        function updateGroupListUI() {
+            groupsList.innerHTML = '';
+            if (groups.length === 0) {
+                noGroupsMsg.classList.remove('hidden');
+            } else {
+                noGroupsMsg.classList.add('hidden');
+                groups.forEach(group => {
+                    const groupElement = document.createElement('div');
+                    groupElement.className = `flex items-center p-3 cursor-pointer hover:bg-gray-100 rounded-lg transition-colors duration-200 ${activeChat.type === 'group' && activeChat.id === group.id ? 'bg-blue-100' : ''}`;
+                    groupElement.innerHTML = `
+                        <div class="w-10 h-10 rounded-full bg-purple-300 flex items-center justify-center text-white font-bold mr-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" class="lucide lucide-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87L16 14"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        </div>
+                        <div>
+                            <p class="font-semibold">${group.name}</p>
+                            <p class="text-sm text-gray-500 truncate">Members: ${group.members.length}</p>
+                        </div>
+                    `;
+                    groupElement.onclick = () => selectChat({ type: 'group', id: group.id, name: group.name, members: group.members });
+                    groupsList.appendChild(groupElement);
+                });
+            }
+        }
+
+        function selectChat(chatInfo) {
+            activeChat = chatInfo;
+            currentChatName.textContent = chatInfo.name;
+            messagesDisplay.innerHTML = ''; // Clear previous messages
+            initialChatMessage.classList.add('hidden'); // Hide initial message
+
+            // Here, you'd load chat history from localStorage if you stored it.
+            // For simplicity, we'll just show new messages.
+            addMessageToDisplay(`You are now chatting in ${chatInfo.name}.`, myId, false, 'system');
+            updateFriendListUI(); // Update UI to highlight selected chat
+            updateGroupListUI();
+        }
+
+        function showModal(modalElement) {
+            modalElement.classList.remove('hidden');
+        }
+
+        function hideModal(modalElement) {
+            modalElement.classList.add('hidden');
+        }
+
+        // --- PeerJS Event Handlers ---
+        function initializePeer() {
+            peer = new Peer({
+                config: {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' },
+                        { urls: 'stun:stun3.l.google.com:19302' },
+                        { urls: 'stun:stun4.l.google.com:19302' }
+                    ]
+                }
+            });
+
+            peer.on('open', id => {
+                myId = id;
+                myPeerIdSpan.textContent = myId;
+                console.log("My Peer ID:", myId);
+            });
+
+            peer.on('connection', (conn) => {
+                console.log(`Incoming connection from ${conn.peer}`);
+                addFriendStatus.textContent = `Incoming connection from ${conn.peer.substring(0, 5)}.`;
+                addMessageToDisplay(`Incoming connection from ${conn.peer.substring(0, 5)}.`, conn.peer, false, 'system');
+
+                // If not already connected to this peer, establish connection
+                if (!directConnections.has(conn.peer)) {
+                    setupConnection(conn);
+                    // Automatically add to friends list upon successful connection
+                    if (!friends.some(f => f.id === conn.peer)) {
+                        friends.push({ id: conn.peer, name: `Friend ${conn.peer.substring(0, 5)}` });
+                        saveFriends();
+                        updateFriendListUI();
+                    }
+                } else {
+                    console.log(`Already connected to ${conn.peer}.`);
+                    conn.on('open', () => conn.send('Already connected to you.'));
+                    conn.close(); // Close the new incoming connection if already active
+                }
+            });
+
+            peer.on('error', (err) => {
+                console.error("PeerJS Error:", err);
+                addFriendStatus.textContent = `Error: ${err.message}`;
+                createGroupStatus.textContent = `Error: ${err.message}`;
+            });
+        }
+
+        function setupConnection(conn) {
+            directConnections.set(conn.peer, conn);
+
+            conn.on('open', () => {
+                console.log(`Connection opened with ${conn.peer}`);
+                addFriendStatus.textContent = `Connected to ${conn.peer.substring(0, 5)}!`;
+                addMessageToDisplay(`Connected to ${conn.peer.substring(0, 5)}.`, conn.peer, false, 'system');
+                hideModal(addFriendModal);
+                selectChat({ type: 'user', id: conn.peer, name: getFriendName(conn.peer) || conn.peer.substring(0, 5) });
+            });
+
+            conn.on('data', (data) => {
+                console.log(`Received data from ${conn.peer}:`, data);
+                if (activeChat.type === 'user' && activeChat.id === conn.peer) {
+                    addMessageToDisplay(data, conn.peer, false, 'user');
+                } else if (activeChat.type === 'group' && activeChat.members.includes(conn.peer)) {
+                    // If in a group chat, display message from any group member
+                    addMessageToDisplay(data, conn.peer, false, 'group');
+                } else {
+                    // Handle messages from non-active chats (e.g., show notification)
+                    console.log(`Message from non-active chat ${conn.peer}: ${data}`);
+                    // You could implement a simple notification here
+                }
+            });
+
+            conn.on('close', () => {
+                console.log(`Connection closed with ${conn.peer}`);
+                addMessageToDisplay(`Disconnected from ${conn.peer.substring(0, 5)}.`, conn.peer, false, 'system');
+                directConnections.delete(conn.peer);
+                // If the disconnected peer was the active chat, go back to a neutral state
+                if (activeChat.id === conn.peer) {
+                    activeChat = { type: null, id: null, name: null };
+                    currentChatName.textContent = 'Select a chat';
+                    messagesDisplay.innerHTML = '';
+                    initialChatMessage.classList.remove('hidden');
+                }
+                updateFriendListUI();
+            });
+
+            conn.on('error', (err) => {
+                console.error(`Connection error with ${conn.peer}:`, err);
+                addFriendStatus.textContent = `Connection error with ${conn.peer.substring(0, 5)}.`;
+                addMessageToDisplay(`Connection error with ${conn.peer.substring(0, 5)}.`, conn.peer, false, 'system');
+                directConnections.delete(conn.peer);
+                updateFriendListUI();
+            });
+        }
+
+        // --- Event Listeners ---
+        window.onload = initializePeer; // Initialize PeerJS when window loads
+
+        myPeerIdSpan.addEventListener('click', () => {
+            if (myId) {
+                navigator.clipboard.writeText(myId).then(() => {
+                    myPeerIdSpan.textContent = 'Copied!';
+                    setTimeout(() => { myPeerIdSpan.textContent = myId; }, 1500);
+                }).catch(err => {
+                    console.error('Failed to copy ID:', err);
+                    alert('Failed to copy ID. Please copy manually.'); // Fallback for browsers without clipboard API
+                });
+            }
+        });
+
+        // Add Friend Modal Logic
+        document.getElementById('no-direct-chats').addEventListener('click', () => showModal(addFriendModal));
+        cancelAddFriendBtn.addEventListener('click', () => {
+            hideModal(addFriendModal);
+            friendIdInput.value = '';
+            addFriendStatus.textContent = '';
+        });
+        confirmAddFriendBtn.addEventListener('click', () => {
+            const friendId = friendIdInput.value.trim();
+            if (!friendId || friendId === myId) {
+                addFriendStatus.textContent = 'Please enter a valid, different Peer ID.';
+                return;
+            }
+
+            if (directConnections.has(friendId)) {
+                addFriendStatus.textContent = `Already connected or attempting to connect to ${friendId.substring(0, 5)}.`;
+                selectChat({ type: 'user', id: friendId, name: getFriendName(friendId) || friendId.substring(0, 5) });
+                hideModal(addFriendModal);
+                return;
+            }
+
+            addFriendStatus.textContent = `Attempting to connect to ${friendId.substring(0, 5)}...`;
+            const conn = peer.connect(friendId);
+            setupConnection(conn);
+
+            // Add to local friends list immediately
+            if (!friends.some(f => f.id === friendId)) {
+                friends.push({ id: friendId, name: `Friend ${friendId.substring(0, 5)}` });
+                saveFriends();
+                updateFriendListUI();
+            }
+            friendIdInput.value = '';
+        });
+
+        // Create Group Modal Logic
+        createGroupBtn.addEventListener('click', () => {
+            showModal(createGroupModal);
+            groupNameInput.value = '';
+            addMemberIdInput.value = '';
+            selectedMembersList.innerHTML = '';
+            createGroupStatus.textContent = '';
+            // Add current user's ID to selected members by default for group creation
+            if (myId) {
+                const listItem = document.createElement('li');
+                listItem.className = 'flex items-center justify-between p-2 bg-blue-100 rounded-md mb-1';
+                listItem.textContent = `You (${myId.substring(0,5)})`;
+                selectedMembersList.appendChild(listItem);
+            }
+            // Temporarily store selected members for the modal
+            groupMembers.set('temp_group_members', new Set([myId]));
+        });
+
+        cancelCreateGroupBtn.addEventListener('click', () => {
+            hideModal(createGroupModal);
+            groupMembers.delete('temp_group_members'); // Clear temp members
+        });
+
+        addMemberBtn.addEventListener('click', () => {
+            const memberId = addMemberIdInput.value.trim();
+            if (!memberId || memberId === myId) {
+                createGroupStatus.textContent = 'Enter a valid, different Peer ID to add.';
+                return;
+            }
+            let tempMembers = groupMembers.get('temp_group_members') || new Set();
+            if (tempMembers.has(memberId)) {
+                createGroupStatus.textContent = 'This member is already added.';
+                return;
+            }
+            tempMembers.add(memberId);
+            groupMembers.set('temp_group_members', tempMembers);
+
+            const listItem = document.createElement('li');
+            listItem.className = 'flex items-center justify-between p-2 bg-gray-200 rounded-md mb-1';
+            listItem.innerHTML = `
+                <span>${getFriendName(memberId) || memberId.substring(0, 5)}</span>
+                <button class="text-red-500 hover:text-red-700 text-sm remove-member-btn" data-id="${memberId}">Remove</button>
+            `;
+            selectedMembersList.appendChild(listItem);
+            addMemberIdInput.value = '';
+            createGroupStatus.textContent = '';
+
+            listItem.querySelector('.remove-member-btn').addEventListener('click', (e) => {
+                const idToRemove = e.target.dataset.id;
+                let currentTempMembers = groupMembers.get('temp_group_members');
+                if (currentTempMembers) {
+                    currentTempMembers.delete(idToRemove);
+                    groupMembers.set('temp_group_members', currentTempMembers);
+                }
+                listItem.remove();
+            });
+        });
+
+        confirmCreateGroupBtn.addEventListener('click', () => {
+            const groupName = groupNameInput.value.trim();
+            const members = Array.from(groupMembers.get('temp_group_members') || []);
+
+            if (!groupName) {
+                createGroupStatus.textContent = 'Please enter a group name.';
+                return;
+            }
+            if (members.length < 2) { // At least current user + one other
+                createGroupStatus.textContent = 'Please add at least one other member to the group.';
+                return;
+            }
+
+            const newGroupId = `group_${Date.now()}`; // Simple unique ID
+            const newGroup = { id: newGroupId, name: groupName, members: members };
+            groups.push(newGroup);
+            saveGroups();
+            updateGroupListUI();
+            hideModal(createGroupModal);
+            createGroupStatus.textContent = `Group "${groupName}" created!`;
+            selectChat({ type: 'group', id: newGroupId, name: groupName, members: members });
+        });
+
+
+        // Send Message Logic
+        sendMessageBtn.addEventListener('click', () => {
+            const message = messageInput.value.trim();
+            if (!message || !activeChat.id) return;
+
+            addMessageToDisplay(message, myId, true, activeChat.type);
+            messageInput.value = '';
+
+            if (activeChat.type === 'user') {
+                const conn = directConnections.get(activeChat.id);
+                if (conn && conn.open) {
+                    conn.send(message);
+                } else {
+                    addMessageToDisplay(`Error: Not connected to ${activeChat.name}.`, myId, false, 'system');
+                    console.error('Connection not open for direct chat:', activeChat.id);
+                }
+            } else if (activeChat.type === 'group') {
+                const group = groups.find(g => g.id === activeChat.id);
+                if (group) {
+                    const groupMessage = {
+                        senderId: myId,
+                        text: message,
+                        type: 'group_message',
+                        groupId: group.id
+                    };
+                    group.members.forEach(memberId => {
+                        if (memberId !== myId) {
+                            const conn = directConnections.get(memberId);
+                            if (conn && conn.open) {
+                                conn.send(JSON.stringify(groupMessage)); // Send as JSON to distinguish group messages
+                            } else {
+                                console.warn(`Could not send message to ${memberId.substring(0, 5)} in group ${group.name}: Not connected.`);
+                            }
+                        }
+                    });
+                }
+            }
+        });
+
+        // Handle incoming group messages
+        peer.on('connection', (conn) => {
+            // ... (existing connection setup) ...
+            conn.on('data', (data) => {
+                try {
+                    const parsedData = JSON.parse(data);
+                    if (parsedData.type === 'group_message' && parsedData.groupId && parsedData.senderId) {
+                        const targetGroup = groups.find(g => g.id === parsedData.groupId);
+                        if (targetGroup && targetGroup.members.includes(myId)) { // Ensure I am a member of this group
+                            if (activeChat.type === 'group' && activeChat.id === parsedData.groupId) {
+                                addMessageToDisplay(parsedData.text, parsedData.senderId, false, 'group');
+                            } else {
+                                // Message for a non-active group chat
+                                console.log(`New message in group ${targetGroup.name} from ${parsedData.senderId.substring(0, 5)}: ${parsedData.text}`);
+                                // You could add a notification or badge here
+                            }
+                        }
+                    } else {
+                        // Regular direct message
+                        if (activeChat.type === 'user' && activeChat.id === conn.peer) {
+                            addMessageToDisplay(data, conn.peer, false, 'user');
+                        } else {
+                             console.log(`Direct message from non-active user ${conn.peer}: ${data}`);
+                        }
+                    }
+                } catch (e) {
+                    // Not JSON, treat as a regular direct message
+                    if (activeChat.type === 'user' && activeChat.id === conn.peer) {
+                        addMessageToDisplay(data, conn.peer, false, 'user');
+                    } else {
+                        console.log(`Direct message from non-active user ${conn.peer}: ${data}`);
+                    }
+                }
+            });
+        });
+
+
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessageBtn.click();
+            }
+        });
+
+        // Theme Toggle
+        themeToggleBtn.addEventListener('click', () => {
+            const currentTheme = document.body.classList.contains('dark') ? 'dark' : 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            document.body.classList.remove(currentTheme);
+            document.body.classList.add(newTheme);
+            localStorage.setItem(LS_THEME_KEY, newTheme);
+            themeToggleBtn.textContent = newTheme === 'light' ? '🌙' : '☀️';
+        });
+
+        // Initial theme load
+        const savedTheme = localStorage.getItem(LS_THEME_KEY) || 'light';
+        document.body.classList.add(savedTheme);
+        themeToggleBtn.textContent = savedTheme === 'light' ? '🌙' : '☀️';
+
+        // Initial UI updates
+        updateFriendListUI();
+        updateGroupListUI();
+
+        // Add friend button in sidebar (for direct access to modal)
+        const addFriendSidebarBtn = document.createElement('button');
+        addFriendSidebarBtn.className = 'w-full p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200 mt-4';
+        addFriendSidebarBtn.textContent = 'Add New Friend';
+        addFriendSidebarBtn.onclick = () => showModal(addFriendModal);
+        directMessagesList.parentNode.insertBefore(addFriendSidebarBtn, directMessagesList.nextSibling);
+
+        // Search functionality (basic client-side filter)
+        searchInput.addEventListener('input', () => {
+            const searchTerm = searchInput.value.toLowerCase();
+
+            // Filter direct messages
+            directMessagesList.querySelectorAll('.flex.items-center').forEach(item => {
+                const name = item.querySelector('.font-semibold').textContent.toLowerCase();
+                if (name.includes(searchTerm)) {
+                    item.classList.remove('hidden');
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+
+            // Filter groups
+            groupsList.querySelectorAll('.flex.items-center').forEach(item => {
+                const name = item.querySelector('.font-semibold').textContent.toLowerCase();
+                if (name.includes(searchTerm)) {
+                    item.classList.remove('hidden');
+                } else {
+                    item.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
